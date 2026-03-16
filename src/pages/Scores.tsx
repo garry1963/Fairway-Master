@@ -69,7 +69,7 @@ export function Scores() {
     };
 
     if (existingScore && existingScore.id) {
-      await db.scoreCards.update(existingScore.id, scoreCard);
+      await db.scoreCards.put({ ...scoreCard, id: existingScore.id });
     } else {
       await db.scoreCards.add(scoreCard);
     }

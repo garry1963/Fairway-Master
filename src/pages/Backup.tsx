@@ -48,7 +48,7 @@ export function Backup() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      await db.transaction('rw', db.members, db.courses, db.seasons, db.tournaments, db.scoreCards, async () => {
+      await db.transaction('rw', [db.members, db.courses, db.seasons, db.tournaments, db.scoreCards], async () => {
         await db.members.clear();
         await db.courses.clear();
         await db.seasons.clear();
