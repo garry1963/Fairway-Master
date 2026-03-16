@@ -14,11 +14,16 @@ export function Tournaments() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    const endDateStr = formData.get('endDate') as string;
+    const numRoundsStr = formData.get('numberOfRounds') as string;
+
     await db.tournaments.add({
       name: formData.get('name') as string,
       courseId: parseInt(formData.get('courseId') as string, 10),
       seasonId: 1, // Default season for now
       date: new Date(formData.get('date') as string),
+      endDate: endDateStr ? new Date(endDateStr) : undefined,
+      numberOfRounds: numRoundsStr ? parseInt(numRoundsStr, 10) : 1,
       format: formData.get('format') as string,
       isMajor: formData.get('isMajor') === 'on'
     });
@@ -67,8 +72,16 @@ export function Tournaments() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date *</label>
               <input required name="date" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">End Date (Optional)</label>
+              <input name="endDate" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Number of Rounds</label>
+              <input name="numberOfRounds" type="number" min="1" defaultValue="1" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Format *</label>
@@ -114,7 +127,11 @@ export function Tournaments() {
               <div className="p-4 flex-1 space-y-3">
                 <div className="flex items-center gap-3 text-slate-600">
                   <CalendarIcon className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm">{format(new Date(tournament.date), 'MMMM d, yyyy')}</span>
+                  <span className="text-sm">
+                    {format(new Date(tournament.date), 'MMM d, yyyy')}
+                    {tournament.endDate && ` - ${format(new Date(tournament.endDate), 'MMM d, yyyy')}`}
+                    {tournament.numberOfRounds && tournament.numberOfRounds > 1 && ` (${tournament.numberOfRounds} Rounds)`}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-600">
                   <MapPin className="w-4 h-4 text-slate-400" />

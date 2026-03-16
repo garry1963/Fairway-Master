@@ -43,6 +43,8 @@ export interface Tournament {
   courseId: number;
   name: string;
   date: Date;
+  endDate?: Date;
+  numberOfRounds?: number;
   format: string; // 'Stableford', 'Stroke Play', etc.
   isMajor: boolean;
 }

@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Trophy, Map, FileSpreadsheet, BarChart3, Settings, Database, Layers, LineChart, Download } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Trophy, Map, FileSpreadsheet, BarChart3, Settings, Database, Layers, LineChart, Download, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { name: 'Statistics', path: '/statistics', icon: LineChart },
   { name: 'Settings', path: '/settings', icon: Settings },
   { name: 'Backup', path: '/backup', icon: Download },
+  { name: 'Help', path: '/help', icon: HelpCircle },
 ];
 
 export function Layout() {

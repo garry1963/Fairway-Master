@@ -16,6 +16,7 @@ import { Divisions } from './pages/Divisions';
 import { Statistics } from './pages/Statistics';
 import { Settings } from './pages/Settings';
 import { Backup } from './pages/Backup';
+import { Help } from './pages/Help';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="statistics" element={<Statistics />} />
           <Route path="settings" element={<Settings />} />
           <Route path="backup" element={<Backup />} />
+          <Route path="help" element={<Help />} />
           <Route path="*" element={<div className="p-8 text-center text-gray-500">Coming soon...</div>} />
         </Route>
       </Routes>
