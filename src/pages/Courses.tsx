@@ -8,26 +8,24 @@ export function Courses() {
   const [expandedCourseId, setExpandedCourseId] = useState<number | null>(null);
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseLocation, setNewCourseLocation] = useState('');
+  const [holes, setHoles] = useState<HoleDefinition[]>(
+    Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 }))
+  );
   
   const courses = useLiveQuery(() => db.courses.toArray());
+
+  const handleHoleChange = (index: number, field: keyof HoleDefinition, value: number) => {
+    const newHoles = [...holes];
+    newHoles[index] = { ...newHoles[index], [field]: value };
+    setHoles(newHoles);
+  };
 
   const handleAddCourse = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const holes: HoleDefinition[] = [];
-    let totalPar = 0;
-    let totalYardage = 0;
-
-    for (let i = 1; i <= 18; i++) {
-      const par = parseInt(formData.get(`hole_${i}_par`) as string, 10);
-      const yardage = parseInt(formData.get(`hole_${i}_yardage`) as string, 10);
-      const strokeIndex = parseInt(formData.get(`hole_${i}_si`) as string, 10);
-      
-      holes.push({ holeNumber: i, par, yardage, strokeIndex });
-      totalPar += par;
-      totalYardage += yardage;
-    }
+    const totalPar = holes.reduce((sum, h) => sum + h.par, 0);
+    const totalYardage = holes.reduce((sum, h) => sum + h.yardage, 0);
 
     await db.courses.add({
       name: formData.get('name') as string,
@@ -42,6 +40,7 @@ export function Courses() {
     setIsAdding(false);
     setNewCourseName('');
     setNewCourseLocation('');
+    setHoles(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 })));
   };
 
   const handleDelete = async (id: number) => {
@@ -121,41 +120,77 @@ export function Courses() {
             </div>
 
             <div>
-              <h3 className="text-md font-medium text-slate-800 mb-3 border-b pb-2">Hole Details</h3>
+              <div className="flex justify-between items-end mb-3 border-b pb-2">
+                <h3 className="text-md font-medium text-slate-800">Hole Details</h3>
+                <div className="flex gap-4 text-sm font-medium text-slate-600">
+                  <span className="bg-slate-100 px-3 py-1 rounded-md">Total Par: <span className="font-bold text-slate-900">{holes.reduce((sum, h) => sum + h.par, 0)}</span></span>
+                  <span className="bg-slate-100 px-3 py-1 rounded-md">Total Yardage: <span className="font-bold text-slate-900">{holes.reduce((sum, h) => sum + h.yardage, 0)}</span></span>
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-center">
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="p-2 border">Hole</th>
-                      {Array.from({ length: 18 }, (_, i) => (
-                        <th key={i} className="p-2 border w-12">{i + 1}</th>
+                      <th className="p-2 border min-w-[4rem]">Hole</th>
+                      {Array.from({ length: 9 }, (_, i) => (
+                        <th key={i} className="p-2 border min-w-[5.5rem]">{i + 1}</th>
                       ))}
+                      <th className="p-2 border min-w-[5.5rem] font-bold bg-slate-100">OUT</th>
+                      {Array.from({ length: 9 }, (_, i) => (
+                        <th key={i + 9} className="p-2 border min-w-[5.5rem]">{i + 10}</th>
+                      ))}
+                      <th className="p-2 border min-w-[5.5rem] font-bold bg-slate-100">IN</th>
+                      <th className="p-2 border min-w-[5.5rem] font-bold bg-slate-200">TOT</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td className="p-2 border font-medium bg-slate-50">Par</td>
-                      {Array.from({ length: 18 }, (_, i) => (
+                      {holes.slice(0, 9).map((h, i) => (
                         <td key={i} className="p-1 border">
-                          <input required name={`hole_${i+1}_par`} type="number" min="3" max="6" defaultValue="4" className="w-full text-center border-none p-1 focus:ring-0" />
+                          <input required type="number" min="3" max="6" value={h.par} onChange={(e) => handleHoleChange(i, 'par', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0" />
                         </td>
                       ))}
+                      <td className="p-2 border font-bold bg-slate-100">{holes.slice(0, 9).reduce((sum, h) => sum + h.par, 0)}</td>
+                      {holes.slice(9, 18).map((h, i) => (
+                        <td key={i + 9} className="p-1 border">
+                          <input required type="number" min="3" max="6" value={h.par} onChange={(e) => handleHoleChange(i + 9, 'par', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0" />
+                        </td>
+                      ))}
+                      <td className="p-2 border font-bold bg-slate-100">{holes.slice(9, 18).reduce((sum, h) => sum + h.par, 0)}</td>
+                      <td className="p-2 border font-bold bg-slate-200">{holes.reduce((sum, h) => sum + h.par, 0)}</td>
                     </tr>
                     <tr>
                       <td className="p-2 border font-medium bg-slate-50">Yardage</td>
-                      {Array.from({ length: 18 }, (_, i) => (
+                      {holes.slice(0, 9).map((h, i) => (
                         <td key={i} className="p-1 border">
-                          <input required name={`hole_${i+1}_yardage`} type="number" min="50" max="700" defaultValue="350" className="w-full text-center border-none p-1 focus:ring-0 text-xs" />
+                          <input required type="number" min="50" max="700" value={h.yardage} onChange={(e) => handleHoleChange(i, 'yardage', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0 text-sm" />
                         </td>
                       ))}
+                      <td className="p-2 border font-bold bg-slate-100">{holes.slice(0, 9).reduce((sum, h) => sum + h.yardage, 0)}</td>
+                      {holes.slice(9, 18).map((h, i) => (
+                        <td key={i + 9} className="p-1 border">
+                          <input required type="number" min="50" max="700" value={h.yardage} onChange={(e) => handleHoleChange(i + 9, 'yardage', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0 text-sm" />
+                        </td>
+                      ))}
+                      <td className="p-2 border font-bold bg-slate-100">{holes.slice(9, 18).reduce((sum, h) => sum + h.yardage, 0)}</td>
+                      <td className="p-2 border font-bold bg-slate-200">{holes.reduce((sum, h) => sum + h.yardage, 0)}</td>
                     </tr>
                     <tr>
                       <td className="p-2 border font-medium bg-slate-50">S.I.</td>
-                      {Array.from({ length: 18 }, (_, i) => (
+                      {holes.slice(0, 9).map((h, i) => (
                         <td key={i} className="p-1 border">
-                          <input required name={`hole_${i+1}_si`} type="number" min="1" max="18" defaultValue={i+1} className="w-full text-center border-none p-1 focus:ring-0" />
+                          <input required type="number" min="1" max="18" value={h.strokeIndex} onChange={(e) => handleHoleChange(i, 'strokeIndex', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0" />
                         </td>
                       ))}
+                      <td className="p-2 border bg-slate-100"></td>
+                      {holes.slice(9, 18).map((h, i) => (
+                        <td key={i + 9} className="p-1 border">
+                          <input required type="number" min="1" max="18" value={h.strokeIndex} onChange={(e) => handleHoleChange(i + 9, 'strokeIndex', parseInt(e.target.value) || 0)} className="w-full text-center border-none p-1 focus:ring-0" />
+                        </td>
+                      ))}
+                      <td className="p-2 border bg-slate-100"></td>
+                      <td className="p-2 border bg-slate-200"></td>
                     </tr>
                   </tbody>
                 </table>
@@ -217,26 +252,38 @@ export function Courses() {
                   <table className="w-full text-sm text-center border-collapse">
                     <thead>
                       <tr className="bg-slate-100">
-                        <th className="p-2 border border-slate-300">Hole</th>
-                        {course.holes.map(h => <th key={h.holeNumber} className="p-2 border border-slate-300 w-10">{h.holeNumber}</th>)}
-                        <th className="p-2 border border-slate-300 font-bold">OUT</th>
+                        <th className="p-2 border border-slate-300 min-w-[4rem]">Hole</th>
+                        {course.holes.slice(0, 9).map(h => <th key={h.holeNumber} className="p-2 border border-slate-300 min-w-[4.5rem]">{h.holeNumber}</th>)}
+                        <th className="p-2 border border-slate-300 min-w-[4.5rem] font-bold bg-slate-200">OUT</th>
+                        {course.holes.slice(9, 18).map(h => <th key={h.holeNumber} className="p-2 border border-slate-300 min-w-[4.5rem]">{h.holeNumber}</th>)}
+                        <th className="p-2 border border-slate-300 min-w-[4.5rem] font-bold bg-slate-200">IN</th>
+                        <th className="p-2 border border-slate-300 min-w-[4.5rem] font-bold bg-slate-300">TOT</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
                         <td className="p-2 border border-slate-300 font-medium bg-slate-100">Par</td>
-                        {course.holes.map(h => <td key={h.holeNumber} className="p-2 border border-slate-300">{h.par}</td>)}
-                        <td className="p-2 border border-slate-300 font-bold bg-slate-100">{course.par}</td>
+                        {course.holes.slice(0, 9).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300">{h.par}</td>)}
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-200">{course.holes.slice(0, 9).reduce((sum, h) => sum + h.par, 0)}</td>
+                        {course.holes.slice(9, 18).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300">{h.par}</td>)}
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-200">{course.holes.slice(9, 18).reduce((sum, h) => sum + h.par, 0)}</td>
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-300">{course.par}</td>
                       </tr>
                       <tr>
                         <td className="p-2 border border-slate-300 font-medium bg-slate-100">Yardage</td>
-                        {course.holes.map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-xs">{h.yardage}</td>)}
-                        <td className="p-2 border border-slate-300 font-bold bg-slate-100">{course.yardage}</td>
+                        {course.holes.slice(0, 9).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-sm">{h.yardage}</td>)}
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-200">{course.holes.slice(0, 9).reduce((sum, h) => sum + h.yardage, 0)}</td>
+                        {course.holes.slice(9, 18).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-sm">{h.yardage}</td>)}
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-200">{course.holes.slice(9, 18).reduce((sum, h) => sum + h.yardage, 0)}</td>
+                        <td className="p-2 border border-slate-300 font-bold bg-slate-300">{course.yardage}</td>
                       </tr>
                       <tr>
                         <td className="p-2 border border-slate-300 font-medium bg-slate-100">S.I.</td>
-                        {course.holes.map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-xs">{h.strokeIndex}</td>)}
-                        <td className="p-2 border border-slate-300 bg-slate-100"></td>
+                        {course.holes.slice(0, 9).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-sm">{h.strokeIndex}</td>)}
+                        <td className="p-2 border border-slate-300 bg-slate-200"></td>
+                        {course.holes.slice(9, 18).map(h => <td key={h.holeNumber} className="p-2 border border-slate-300 text-sm">{h.strokeIndex}</td>)}
+                        <td className="p-2 border border-slate-300 bg-slate-200"></td>
+                        <td className="p-2 border border-slate-300 bg-slate-300"></td>
                       </tr>
                     </tbody>
                   </table>

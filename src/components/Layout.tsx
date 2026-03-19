@@ -12,6 +12,7 @@ const navItems = [
   { name: 'Scores', path: '/scores', icon: FileSpreadsheet },
   { name: 'Leaderboards', path: '/leaderboards', icon: BarChart3 },
   { name: 'Statistics', path: '/statistics', icon: LineChart },
+  { name: 'Reports', path: '/reports', icon: FileSpreadsheet },
   { name: 'Settings', path: '/settings', icon: Settings },
   { name: 'Backup', path: '/backup', icon: Download },
   { name: 'Help', path: '/help', icon: HelpCircle },

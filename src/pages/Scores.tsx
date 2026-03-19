@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileSpreadsheet, Save, CheckCircle2 } from 'lucide-react';
+import { FileSpreadsheet, Save, CheckCircle2, Settings2, Download } from 'lucide-react';
 import { db, type ScoreCard, type HoleScore } from '../db';
 import { ScoringEngine } from '../lib/scoring';
+import html2canvas from 'html2canvas';
 
 export function Scores() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | ''>('');
   const [selectedMemberId, setSelectedMemberId] = useState<number | ''>('');
-  const [scores, setScores] = useState<number[]>(Array(18).fill(0));
+  const [scores, setScores] = useState<HoleScore[]>(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
   const [isSaved, setIsSaved] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const tournaments = useLiveQuery(() => db.tournaments.toArray());
   const members = useLiveQuery(() => db.members.toArray());
@@ -18,9 +20,9 @@ export function Scores() {
   const selectedCourse = courses?.find(c => c.id === selectedTournament?.courseId);
   const selectedMember = members?.find(m => m.id === Number(selectedMemberId));
 
-  const handleScoreChange = (index: number, value: string) => {
+  const handleScoreChange = (index: number, field: keyof HoleScore, value: any) => {
     const newScores = [...scores];
-    newScores[index] = parseInt(value, 10) || 0;
+    newScores[index] = { ...newScores[index], [field]: value };
     setScores(newScores);
     setIsSaved(false);
   };
@@ -32,7 +34,8 @@ export function Scores() {
     let net = 0;
     let stableford = 0;
 
-    scores.forEach((score, index) => {
+    scores.forEach((scoreObj, index) => {
+      const score = scoreObj.grossScore;
       if (score > 0) {
         const hole = selectedCourse.holes.find(h => h.holeNumber === index + 1);
         if (hole) {
@@ -52,17 +55,12 @@ export function Scores() {
   const handleSave = async () => {
     if (!selectedTournamentId || !selectedMemberId || !selectedCourse) return;
 
-    const holeScores: HoleScore[] = scores.map((score, index) => ({
-      holeNumber: index + 1,
-      grossScore: score
-    }));
-
     const existingScore = await db.scoreCards.where({ tournamentId: Number(selectedTournamentId), memberId: Number(selectedMemberId) }).first();
 
     const scoreCard: ScoreCard = {
       tournamentId: Number(selectedTournamentId),
       memberId: Number(selectedMemberId),
-      holes: holeScores,
+      holes: scores,
       grossScore: totals.gross,
       netScore: totals.net,
       stablefordPoints: totals.stableford
@@ -78,10 +76,39 @@ export function Scores() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
+  const handleExportScorecard = async () => {
+    const element = document.getElementById('scorecard-container');
+    if (!element) return;
+
+    const canvas = await html2canvas(element, { scale: 2 });
+    const link = document.createElement('a');
+    link.download = `scorecard_${selectedMember?.name}_${selectedTournament?.name}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Score Entry</h1>
+        {selectedTournamentId && selectedMemberId && selectedCourse && (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Settings2 className="w-4 h-4" />
+              {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+            </button>
+            <button 
+              onClick={handleExportScorecard}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export Scorecard
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -115,7 +142,7 @@ export function Scores() {
         </div>
 
         {selectedTournamentId && selectedMemberId && selectedCourse ? (
-          <div className="space-y-6">
+          <div className="space-y-6" id="scorecard-container">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-center border-collapse">
                 <thead>
@@ -151,16 +178,81 @@ export function Scores() {
                         <input 
                           type="number" 
                           min="1" max="20" 
-                          value={scores[i] || ''} 
-                          onChange={(e) => handleScoreChange(i, e.target.value)}
+                          value={scores[i].grossScore || ''} 
+                          onChange={(e) => handleScoreChange(i, 'grossScore', parseInt(e.target.value) || 0)}
                           className="w-full text-center border-none p-1 focus:ring-purple-500 font-bold text-lg" 
                         />
                       </td>
                     ))}
                     <td className="p-2 border border-slate-300 font-bold bg-purple-50 text-purple-900">
-                      {scores.slice(0, 9).reduce((sum, s) => sum + (s || 0), 0)}
+                      {scores.slice(0, 9).reduce((sum, s) => sum + (s.grossScore || 0), 0)}
                     </td>
                   </tr>
+                  {showAdvanced && (
+                    <>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">Putts</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i} className="p-1 border border-slate-300">
+                            <input 
+                              type="number" min="0" max="10" 
+                              value={scores[i].putts || ''} 
+                              onChange={(e) => handleScoreChange(i, 'putts', parseInt(e.target.value) || 0)}
+                              className="w-full text-center border-none p-1 focus:ring-purple-500 text-xs" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(0, 9).reduce((sum, s) => sum + (s.putts || 0), 0)}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">FIR</td>
+                        {Array.from({ length: 9 }, (_, i) => {
+                          const isPar3 = selectedCourse.holes.find(h => h.holeNumber === i + 1)?.par === 3;
+                          return (
+                            <td key={i} className="p-1 border border-slate-300 bg-slate-50">
+                              {!isPar3 && (
+                                <input 
+                                  type="checkbox" 
+                                  checked={scores[i].fir || false} 
+                                  onChange={(e) => handleScoreChange(i, 'fir', e.target.checked)}
+                                  className="rounded text-purple-600 focus:ring-purple-500" 
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(0, 9).filter(s => s.fir).length}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">GIR</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i} className="p-1 border border-slate-300 bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={scores[i].gir || false} 
+                              onChange={(e) => handleScoreChange(i, 'gir', e.target.checked)}
+                              className="rounded text-purple-600 focus:ring-purple-500" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(0, 9).filter(s => s.gir).length}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">Sand Save</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i} className="p-1 border border-slate-300 bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={scores[i].sandSave || false} 
+                              onChange={(e) => handleScoreChange(i, 'sandSave', e.target.checked)}
+                              className="rounded text-purple-600 focus:ring-purple-500" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(0, 9).filter(s => s.sandSave).length}</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -205,19 +297,88 @@ export function Scores() {
                         <input 
                           type="number" 
                           min="1" max="20" 
-                          value={scores[i + 9] || ''} 
-                          onChange={(e) => handleScoreChange(i + 9, e.target.value)}
+                          value={scores[i + 9].grossScore || ''} 
+                          onChange={(e) => handleScoreChange(i + 9, 'grossScore', parseInt(e.target.value) || 0)}
                           className="w-full text-center border-none p-1 focus:ring-purple-500 font-bold text-lg" 
                         />
                       </td>
                     ))}
                     <td className="p-2 border border-slate-300 font-bold bg-purple-50 text-purple-900">
-                      {scores.slice(9, 18).reduce((sum, s) => sum + (s || 0), 0)}
+                      {scores.slice(9, 18).reduce((sum, s) => sum + (s.grossScore || 0), 0)}
                     </td>
                     <td className="p-2 border border-slate-300 font-bold bg-purple-100 text-purple-900 text-lg">
                       {totals.gross}
                     </td>
                   </tr>
+                  {showAdvanced && (
+                    <>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">Putts</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i + 9} className="p-1 border border-slate-300">
+                            <input 
+                              type="number" min="0" max="10" 
+                              value={scores[i + 9].putts || ''} 
+                              onChange={(e) => handleScoreChange(i + 9, 'putts', parseInt(e.target.value) || 0)}
+                              className="w-full text-center border-none p-1 focus:ring-purple-500 text-xs" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(9, 18).reduce((sum, s) => sum + (s.putts || 0), 0)}</td>
+                        <td className="p-2 border border-slate-300 bg-slate-200 font-bold text-xs">{scores.reduce((sum, s) => sum + (s.putts || 0), 0)}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">FIR</td>
+                        {Array.from({ length: 9 }, (_, i) => {
+                          const isPar3 = selectedCourse.holes.find(h => h.holeNumber === i + 10)?.par === 3;
+                          return (
+                            <td key={i + 9} className="p-1 border border-slate-300 bg-slate-50">
+                              {!isPar3 && (
+                                <input 
+                                  type="checkbox" 
+                                  checked={scores[i + 9].fir || false} 
+                                  onChange={(e) => handleScoreChange(i + 9, 'fir', e.target.checked)}
+                                  className="rounded text-purple-600 focus:ring-purple-500" 
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(9, 18).filter(s => s.fir).length}</td>
+                        <td className="p-2 border border-slate-300 bg-slate-200 font-bold text-xs">{scores.filter(s => s.fir).length}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">GIR</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i + 9} className="p-1 border border-slate-300 bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={scores[i + 9].gir || false} 
+                              onChange={(e) => handleScoreChange(i + 9, 'gir', e.target.checked)}
+                              className="rounded text-purple-600 focus:ring-purple-500" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(9, 18).filter(s => s.gir).length}</td>
+                        <td className="p-2 border border-slate-300 bg-slate-200 font-bold text-xs">{scores.filter(s => s.gir).length}</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 border border-slate-300 font-medium bg-slate-50 text-left text-xs">Sand Save</td>
+                        {Array.from({ length: 9 }, (_, i) => (
+                          <td key={i + 9} className="p-1 border border-slate-300 bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={scores[i + 9].sandSave || false} 
+                              onChange={(e) => handleScoreChange(i + 9, 'sandSave', e.target.checked)}
+                              className="rounded text-purple-600 focus:ring-purple-500" 
+                            />
+                          </td>
+                        ))}
+                        <td className="p-2 border border-slate-300 bg-slate-100 font-bold text-xs">{scores.slice(9, 18).filter(s => s.sandSave).length}</td>
+                        <td className="p-2 border border-slate-300 bg-slate-200 font-bold text-xs">{scores.filter(s => s.sandSave).length}</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -14,6 +14,7 @@ import { Leaderboards } from './pages/Leaderboards';
 import { Seasons } from './pages/Seasons';
 import { Divisions } from './pages/Divisions';
 import { Statistics } from './pages/Statistics';
+import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { Backup } from './pages/Backup';
 import { Help } from './pages/Help';
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="scores" element={<Scores />} />
           <Route path="leaderboards" element={<Leaderboards />} />
           <Route path="statistics" element={<Statistics />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
           <Route path="backup" element={<Backup />} />
           <Route path="help" element={<Help />} />

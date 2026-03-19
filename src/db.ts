@@ -37,21 +37,19 @@ export interface Season {
   numDivisions: number;
 }
 
-export interface Tournament {
-  id?: number;
-  seasonId: number;
-  courseId: number;
-  name: string;
-  date: Date;
-  endDate?: Date;
-  numberOfRounds?: number;
-  format: string; // 'Stableford', 'Stroke Play', etc.
-  isMajor: boolean;
-}
-
 export interface HoleScore {
   holeNumber: number;
   grossScore: number;
+  putts?: number;
+  fir?: boolean; // Fairway in Regulation
+  gir?: boolean; // Green in Regulation
+  sandSave?: boolean;
+}
+
+export interface SideGameWinner {
+  type: 'Longest Drive' | 'Nearest the Pin' | string;
+  memberId: number;
+  holeNumber?: number;
 }
 
 export interface ScoreCard {
@@ -62,6 +60,20 @@ export interface ScoreCard {
   grossScore: number;
   netScore: number;
   stablefordPoints: number;
+}
+
+export interface Tournament {
+  id?: number;
+  seasonId: number;
+  courseId: number;
+  name: string;
+  date: Date;
+  endDate?: Date;
+  numberOfRounds?: number;
+  format: string; // 'Stableford', 'Stroke Play', etc.
+  isMajor: boolean;
+  isOrderOfMerit?: boolean;
+  sideGames?: SideGameWinner[];
 }
 
 const db = new Dexie('GolfSocietyDB') as Dexie & {
