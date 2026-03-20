@@ -1,6 +1,7 @@
+/// <reference types="vite/client" />
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe } from 'lucide-react';
+import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe, Search, Loader2 } from 'lucide-react';
 import { db, type Course, type HoleDefinition } from '../db';
 
 export function Courses() {
@@ -8,6 +9,12 @@ export function Courses() {
   const [expandedCourseId, setExpandedCourseId] = useState<number | null>(null);
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseLocation, setNewCourseLocation] = useState('');
+  const [newCourseRating, setNewCourseRating] = useState('');
+  const [newSlopeRating, setNewSlopeRating] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [holes, setHoles] = useState<HoleDefinition[]>(
     Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 }))
   );
@@ -40,6 +47,8 @@ export function Courses() {
     setIsAdding(false);
     setNewCourseName('');
     setNewCourseLocation('');
+    setNewCourseRating('');
+    setNewSlopeRating('');
     setHoles(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 })));
   };
 
@@ -57,6 +66,124 @@ export function Courses() {
     e.stopPropagation();
     const query = encodeURIComponent(`${name} golf course ${location}`.trim());
     window.open(`https://www.google.com/search?q=${query}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleApiSearch = async () => {
+    if (!searchQuery) return;
+    setIsSearching(true);
+    setSearchError('');
+    setSearchResults([]);
+    
+    try {
+      const apiKey = import.meta.env.VITE_GOLF_COURSE_API_KEY;
+      if (!apiKey) {
+        setSearchError('API key is missing. Please set VITE_GOLF_COURSE_API_KEY in your environment variables.');
+        setIsSearching(false);
+        return;
+      }
+
+      const response = await fetch(`https://api.golfcourseapi.com/v1/search?search_query=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          'Authorization': `Key ${apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Invalid API key. Please check your VITE_GOLF_COURSE_API_KEY.');
+        }
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.courses || []);
+      if (data.courses?.length === 0) {
+        setSearchError('No courses found.');
+      }
+    } catch (err: any) {
+      setSearchError(err.message || 'Failed to search courses.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectCourse = async (courseId: number) => {
+    setIsSearching(true);
+    setSearchError('');
+    
+    // Find the course in search results first to use as a fallback
+    const searchResult = searchResults.find(c => c.id === courseId);
+    
+    try {
+      const apiKey = import.meta.env.VITE_GOLF_COURSE_API_KEY;
+      const response = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
+        headers: {
+          'Authorization': `Key ${apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const rawData = await response.json();
+      let data = rawData.course || rawData.data || rawData;
+      
+      // Fallback to search results data if the detailed API response is missing expected fields
+      if (!data.course_name && !data.club_name && searchResult) {
+        data = searchResult;
+      }
+      
+      populateFormWithCourseData(data);
+    } catch (err: any) {
+      console.error("Failed to fetch detailed course info, falling back to search result data", err);
+      if (searchResult) {
+        populateFormWithCourseData(searchResult);
+      } else {
+        setSearchError(err.message || 'Failed to fetch course details.');
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const populateFormWithCourseData = (data: any) => {
+    setNewCourseName(data.course_name || data.club_name || '');
+    
+    const locParts = [data.location?.city, data.location?.state, data.location?.country].filter(Boolean);
+    setNewCourseLocation(locParts.join(', '));
+    
+    let selectedTee = null;
+    if (Array.isArray(data.tees)) {
+      selectedTee = [...data.tees].sort((a, b) => (b.total_yards || 0) - (a.total_yards || 0))[0];
+    } else if (data.tees) {
+      if (data.tees.male?.length > 0) {
+        selectedTee = [...data.tees.male].sort((a, b) => (b.total_yards || 0) - (a.total_yards || 0))[0];
+      } else if (data.tees.female?.length > 0) {
+        selectedTee = [...data.tees.female].sort((a, b) => (b.total_yards || 0) - (a.total_yards || 0))[0];
+      }
+    }
+
+    if (selectedTee) {
+      setNewCourseRating(selectedTee.course_rating?.toString() || '');
+      setNewSlopeRating(selectedTee.slope_rating?.toString() || '');
+      
+      if (selectedTee.holes?.length > 0) {
+        const newHoles = Array.from({ length: 18 }, (_, i) => {
+          const holeData = selectedTee.holes[i];
+          return {
+            holeNumber: i + 1,
+            par: holeData?.par || 4,
+            yardage: holeData?.yardage || 350,
+            strokeIndex: holeData?.handicap || i + 1
+          };
+        });
+        setHoles(newHoles);
+      }
+    }
+    
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   return (
@@ -86,6 +213,56 @@ export function Courses() {
               Search Web for Info
             </button>
           </div>
+
+          <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Search GolfCourseAPI Database</label>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleApiSearch()}
+                placeholder="Enter course or club name..."
+                className="flex-1 rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border"
+              />
+              <button 
+                type="button"
+                onClick={handleApiSearch}
+                disabled={isSearching || !searchQuery}
+                className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                Search API
+              </button>
+            </div>
+            
+            {searchError && (
+              <p className="mt-2 text-sm text-red-600">{searchError}</p>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="mt-3 max-h-60 overflow-y-auto border border-slate-200 rounded-md bg-white">
+                <ul className="divide-y divide-slate-200">
+                  {searchResults.map((course) => (
+                    <li key={course.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCourse(course.id)}
+                        className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors flex justify-between items-center"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-900">{course.course_name}</p>
+                          <p className="text-sm text-slate-500">{course.club_name} • {course.location?.city}, {course.location?.state}</p>
+                        </div>
+                        <Plus className="w-4 h-4 text-emerald-600" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
           <form onSubmit={handleAddCourse} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
@@ -111,11 +288,26 @@ export function Courses() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Course Rating *</label>
-                <input required name="courseRating" type="number" step="0.1" className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border" />
+                <input 
+                  required 
+                  name="courseRating" 
+                  type="number" 
+                  step="0.1" 
+                  value={newCourseRating}
+                  onChange={(e) => setNewCourseRating(e.target.value)}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border" 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Slope Rating *</label>
-                <input required name="slopeRating" type="number" className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border" />
+                <input 
+                  required 
+                  name="slopeRating" 
+                  type="number" 
+                  value={newSlopeRating}
+                  onChange={(e) => setNewSlopeRating(e.target.value)}
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border" 
+                />
               </div>
             </div>
 
