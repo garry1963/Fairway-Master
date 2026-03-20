@@ -1,6 +1,21 @@
-import { Settings as SettingsIcon, Percent, ShieldCheck, Scale, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Percent, ShieldCheck, Scale, Info, Database } from 'lucide-react';
 
 export function Settings() {
+  const [apiName, setApiName] = useState('');
+  const [apiKey, setApiKey] = useState('');
+
+  useEffect(() => {
+    setApiName(localStorage.getItem('golfCourseApiName') || '');
+    setApiKey(localStorage.getItem('golfCourseApiKey') || '');
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem('golfCourseApiName', apiName);
+    localStorage.setItem('golfCourseApiKey', apiKey);
+    alert('Settings saved successfully!');
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex justify-between items-center">
@@ -264,8 +279,52 @@ export function Settings() {
         </div>
       </div>
 
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div className="flex items-center gap-3 mb-6">
+          <Database className="w-6 h-6 text-purple-500" />
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Integrations</h2>
+            <p className="text-sm text-slate-500 mt-1">Configure external services and APIs.</p>
+          </div>
+        </div>
+
+        <div className="space-y-6 max-w-2xl">
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+            <h3 className="font-semibold text-slate-900 mb-4">GolfCourseAPI Database</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
+                <input 
+                  type="text" 
+                  value={apiName}
+                  onChange={(e) => setApiName(e.target.value)}
+                  placeholder="e.g. My Golf Society"
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-2 border" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Secret API Key</label>
+                <input 
+                  type="password" 
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter your GolfCourseAPI key"
+                  className="w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-2 border" 
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  This key is required to search and auto-fill course details when adding a new course. You can get a free API key at <a href="https://golfcourseapi.com/" target="_blank" rel="noreferrer" className="text-purple-600 hover:underline">golfcourseapi.com</a>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end pt-4">
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-sm transition-colors text-lg">
+        <button 
+          onClick={handleSave}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-sm transition-colors text-lg"
+        >
           Save All Settings
         </button>
       </div>

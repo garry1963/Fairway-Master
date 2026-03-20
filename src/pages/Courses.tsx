@@ -75,9 +75,9 @@ export function Courses() {
     setSearchResults([]);
     
     try {
-      const apiKey = import.meta.env.VITE_GOLF_COURSE_API_KEY;
+      const apiKey = localStorage.getItem('golfCourseApiKey') || import.meta.env.VITE_GOLF_COURSE_API_KEY;
       if (!apiKey) {
-        setSearchError('API key is missing. Please set VITE_GOLF_COURSE_API_KEY in your environment variables.');
+        setSearchError('API key is missing. Please configure it in Settings or set VITE_GOLF_COURSE_API_KEY in your environment variables.');
         setIsSearching(false);
         return;
       }
@@ -115,7 +115,7 @@ export function Courses() {
     const searchResult = searchResults.find(c => c.id === courseId);
     
     try {
-      const apiKey = import.meta.env.VITE_GOLF_COURSE_API_KEY;
+      const apiKey = localStorage.getItem('golfCourseApiKey') || import.meta.env.VITE_GOLF_COURSE_API_KEY;
       const response = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
         headers: {
           'Authorization': `Key ${apiKey}`
