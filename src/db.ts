@@ -76,12 +76,18 @@ export interface Tournament {
   sideGames?: SideGameWinner[];
 }
 
+export interface Division {
+  id?: number;
+  name: string;
+}
+
 const db = new Dexie('GolfSocietyDB') as Dexie & {
   members: EntityTable<Member, 'id'>;
   courses: EntityTable<Course, 'id'>;
   seasons: EntityTable<Season, 'id'>;
   tournaments: EntityTable<Tournament, 'id'>;
   scoreCards: EntityTable<ScoreCard, 'id'>;
+  divisions: EntityTable<Division, 'id'>;
 };
 
 db.version(1).stores({
@@ -90,6 +96,15 @@ db.version(1).stores({
   seasons: '++id, name, startDate',
   tournaments: '++id, seasonId, courseId, date',
   scoreCards: '++id, tournamentId, memberId, [tournamentId+memberId]'
+});
+
+db.version(2).stores({
+  members: '++id, name, divisionId, isActive',
+  courses: '++id, name',
+  seasons: '++id, name, startDate',
+  tournaments: '++id, seasonId, courseId, date',
+  scoreCards: '++id, tournamentId, memberId, [tournamentId+memberId]',
+  divisions: '++id, name'
 });
 
 export { db };

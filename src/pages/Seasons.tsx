@@ -12,6 +12,7 @@ export function Seasons() {
   const members = useLiveQuery(() => db.members.toArray());
   const tournaments = useLiveQuery(() => db.tournaments.toArray());
   const scoreCards = useLiveQuery(() => db.scoreCards.toArray());
+  const divisionsList = useLiveQuery(() => db.divisions.toArray());
 
   const handleAddSeason = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export function Seasons() {
   };
 
   const seasonToProcess = useMemo(() => {
-    if (!endingSeasonId || !seasons || !members || !tournaments || !scoreCards) return null;
+    if (!endingSeasonId || !seasons || !members || !tournaments || !scoreCards || !divisionsList) return null;
     
     const season = seasons.find(s => s.id === endingSeasonId);
     if (!season) return null;
@@ -49,26 +50,30 @@ export function Seasons() {
     const seasonScores = scoreCards.filter(s => tournamentIds.has(s.tournamentId));
     
     // Calculate total points per member
-    const memberPoints: Record<number, number> = {};
+    const memberPoints: Record<string, number> = {};
     seasonScores.forEach(score => {
       memberPoints[score.memberId] = (memberPoints[score.memberId] || 0) + score.stablefordPoints;
     });
 
-    // Group members by division
+    // Sort divisions by name to determine hierarchy (e.g., Division 1 is top)
+    const sortedDivisions = [...divisionsList].sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Group members by division ID
     const divisions: Record<number, { member: Member, points: number }[]> = {};
     
     // Initialize divisions
-    for (let i = 1; i <= season.numDivisions; i++) {
-      divisions[i] = [];
-    }
+    sortedDivisions.forEach(d => {
+      if (d.id) divisions[d.id] = [];
+    });
 
     members.forEach(member => {
-      const div = member.divisionId || 1;
-      if (!divisions[div]) divisions[div] = [];
-      divisions[div].push({
-        member,
-        points: memberPoints[member.id!] || 0
-      });
+      const div = member.divisionId;
+      if (div && divisions[div]) {
+        divisions[div].push({
+          member,
+          points: memberPoints[member.id!] || 0
+        });
+      }
     });
 
     // Sort each division by points descending
@@ -79,34 +84,41 @@ export function Seasons() {
     // Determine promotions and relegations (top 2 / bottom 2)
     const changes: { member: Member, from: number, to: number, reason: 'promotion' | 'relegation' }[] = [];
     
-    const numDivs = season.numDivisions;
-    
-    for (let div = 1; div <= numDivs; div++) {
-      const divMembers = divisions[div];
-      if (divMembers.length === 0) continue;
+    for (let i = 0; i < sortedDivisions.length; i++) {
+      const currentDiv = sortedDivisions[i];
+      if (!currentDiv.id) continue;
+      
+      const divMembers = divisions[currentDiv.id];
+      if (!divMembers || divMembers.length === 0) continue;
 
-      // Promotions (not applicable for div 1)
-      if (div > 1) {
-        const promoted = divMembers.slice(0, 2);
-        promoted.forEach(p => {
-          changes.push({ member: p.member, from: div, to: div - 1, reason: 'promotion' });
-        });
+      // Promotions (not applicable for top division)
+      if (i > 0) {
+        const higherDiv = sortedDivisions[i - 1];
+        if (higherDiv && higherDiv.id) {
+          const promoted = divMembers.slice(0, 2);
+          promoted.forEach(p => {
+            changes.push({ member: p.member, from: currentDiv.id!, to: higherDiv.id!, reason: 'promotion' });
+          });
+        }
       }
 
-      // Relegations (not applicable for last div)
-      if (div < numDivs) {
-        // Only relegate if there are more than 2 members, otherwise it's weird
-        if (divMembers.length > 2) {
-          const relegated = divMembers.slice(-2);
-          relegated.forEach(r => {
-            changes.push({ member: r.member, from: div, to: div + 1, reason: 'relegation' });
-          });
+      // Relegations (not applicable for bottom division)
+      if (i < sortedDivisions.length - 1) {
+        const lowerDiv = sortedDivisions[i + 1];
+        if (lowerDiv && lowerDiv.id) {
+          // Only relegate if there are more than 2 members, otherwise it's weird
+          if (divMembers.length > 2) {
+            const relegated = divMembers.slice(-2);
+            relegated.forEach(r => {
+              changes.push({ member: r.member, from: currentDiv.id!, to: lowerDiv.id!, reason: 'relegation' });
+            });
+          }
         }
       }
     }
 
-    return { season, divisions, changes };
-  }, [endingSeasonId, seasons, members, tournaments, scoreCards]);
+    return { season, divisions, changes, sortedDivisions };
+  }, [endingSeasonId, seasons, members, tournaments, scoreCards, divisionsList]);
 
   const applySeasonEnd = async () => {
     if (!seasonToProcess) return;
@@ -118,6 +130,10 @@ export function Seasons() {
     await Promise.all(updates);
     alert('Season ended successfully. Member divisions have been updated.');
     setEndingSeasonId(null);
+  };
+
+  const getDivisionName = (id: number) => {
+    return divisionsList?.find(d => d.id === id)?.name || `Division ${id}`;
   };
 
   return (
@@ -241,8 +257,8 @@ export function Seasons() {
                           {seasonToProcess.changes.filter(c => c.reason === 'promotion').map(change => (
                             <tr key={change.member.id}>
                               <td className="px-4 py-3 font-medium text-slate-900">{change.member.name}</td>
-                              <td className="px-4 py-3 text-slate-600">Div {change.from}</td>
-                              <td className="px-4 py-3 font-bold text-emerald-700">Div {change.to}</td>
+                              <td className="px-4 py-3 text-slate-600">{getDivisionName(change.from)}</td>
+                              <td className="px-4 py-3 font-bold text-emerald-700">{getDivisionName(change.to)}</td>
                             </tr>
                           ))}
                           {seasonToProcess.changes.filter(c => c.reason === 'promotion').length === 0 && (
@@ -271,8 +287,8 @@ export function Seasons() {
                           {seasonToProcess.changes.filter(c => c.reason === 'relegation').map(change => (
                             <tr key={change.member.id}>
                               <td className="px-4 py-3 font-medium text-slate-900">{change.member.name}</td>
-                              <td className="px-4 py-3 text-slate-600">Div {change.from}</td>
-                              <td className="px-4 py-3 font-bold text-red-700">Div {change.to}</td>
+                              <td className="px-4 py-3 text-slate-600">{getDivisionName(change.from)}</td>
+                              <td className="px-4 py-3 font-bold text-red-700">{getDivisionName(change.to)}</td>
                             </tr>
                           ))}
                           {seasonToProcess.changes.filter(c => c.reason === 'relegation').length === 0 && (

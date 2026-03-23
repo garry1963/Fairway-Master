@@ -174,7 +174,7 @@ export function Tournaments() {
                 </div>
                 <div className="flex items-center gap-3 text-slate-600">
                   <MapPin className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm font-medium">{getCourseName(tournament.courseId)}</span>
+                  <span className="text-sm font-medium">{getCourseName(Number(tournament.courseId))}</span>
                 </div>
                 {tournament.sideGames && tournament.sideGames.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-slate-100">
@@ -184,7 +184,7 @@ export function Tournaments() {
                         <div key={idx} className="flex items-center gap-2 text-sm">
                           <Award className="w-3.5 h-3.5 text-amber-500" />
                           <span className="font-medium text-slate-700">{game.type}{game.holeNumber ? ` (Hole ${game.holeNumber})` : ''}:</span>
-                          <span className="text-slate-600">{getMemberName(game.memberId)}</span>
+                          <span className="text-slate-600">{getMemberName(Number(game.memberId))}</span>
                         </div>
                       ))}
                     </div>
@@ -193,7 +193,7 @@ export function Tournaments() {
               </div>
               <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
                 <button 
-                  onClick={() => setManagingSideGames(tournament.id!)}
+                  onClick={() => setManagingSideGames(Number(tournament.id))}
                   className="flex-1 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2"
                 >
                   <Award className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function Tournaments() {
                   <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div>
                       <p className="font-medium text-slate-900">{game.type} {game.holeNumber && <span className="text-slate-500 text-sm">(Hole {game.holeNumber})</span>}</p>
-                      <p className="text-sm text-slate-600">{getMemberName(game.memberId)}</p>
+                      <p className="text-sm text-slate-600">{getMemberName(Number(game.memberId))}</p>
                     </div>
                     <button 
                       onClick={() => handleDeleteSideGame(managingSideGames, idx)}
@@ -272,7 +272,7 @@ export function Tournaments() {
                     <label className="block text-xs font-medium text-slate-700 mb-1">Winner</label>
                     <select 
                       value={newSideGame.memberId || ''}
-                      onChange={(e) => setNewSideGame({...newSideGame, memberId: parseInt(e.target.value)})}
+                      onChange={(e) => setNewSideGame({...newSideGame, memberId: e.target.value ? Number(e.target.value) : undefined})}
                       className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border text-sm"
                     >
                       <option value="">Select a member...</option>

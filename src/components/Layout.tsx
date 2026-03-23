@@ -50,7 +50,7 @@ export function Layout() {
         <div className="p-4 border-t border-slate-700">
           <div className="flex items-center gap-3 px-4 py-2 text-slate-400">
             <Database className="w-4 h-4" />
-            <span className="text-sm">Local SQLite (Dexie)</span>
+            <span className="text-sm">Local Database</span>
           </div>
         </div>
       </div>

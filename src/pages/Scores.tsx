@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { FileSpreadsheet, Save, CheckCircle2, Settings2, Download } from 'lucide-react';
 import { db, type ScoreCard, type HoleScore } from '../db';
 import { ScoringEngine } from '../lib/scoring';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 export function Scores() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | ''>('');
@@ -16,9 +16,9 @@ export function Scores() {
   const members = useLiveQuery(() => db.members.toArray());
   const courses = useLiveQuery(() => db.courses.toArray());
 
-  const selectedTournament = tournaments?.find(t => t.id === Number(selectedTournamentId));
+  const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
   const selectedCourse = courses?.find(c => c.id === selectedTournament?.courseId);
-  const selectedMember = members?.find(m => m.id === Number(selectedMemberId));
+  const selectedMember = members?.find(m => m.id === selectedMemberId);
 
   const handleScoreChange = (index: number, field: keyof HoleScore, value: any) => {
     const newScores = [...scores];
@@ -55,11 +55,12 @@ export function Scores() {
   const handleSave = async () => {
     if (!selectedTournamentId || !selectedMemberId || !selectedCourse) return;
 
-    const existingScore = await db.scoreCards.where({ tournamentId: Number(selectedTournamentId), memberId: Number(selectedMemberId) }).first();
+    const allScores = await db.scoreCards.toArray();
+    const existingScore = allScores.find(s => s.tournamentId === selectedTournamentId && s.memberId === selectedMemberId);
 
     const scoreCard: ScoreCard = {
-      tournamentId: Number(selectedTournamentId),
-      memberId: Number(selectedMemberId),
+      tournamentId: selectedTournamentId,
+      memberId: selectedMemberId,
       holes: scores,
       grossScore: totals.gross,
       netScore: totals.net,
@@ -80,10 +81,10 @@ export function Scores() {
     const element = document.getElementById('scorecard-container');
     if (!element) return;
 
-    const canvas = await html2canvas(element, { scale: 2 });
+    const dataUrl = await toPng(element, { pixelRatio: 2 });
     const link = document.createElement('a');
     link.download = `scorecard_${selectedMember?.name}_${selectedTournament?.name}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = dataUrl;
     link.click();
   };
 
@@ -109,6 +110,21 @@ export function Scores() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-blue-700">
+              <strong>Qualification Rule:</strong> A minimum of 4 rounds of hole scores must be added before a member's points total is added to their associated division leaderboard.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

@@ -7,10 +7,13 @@ export function Members() {
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  const divisions = useLiveQuery(() => db.divisions.toArray());
+  
   const members = useLiveQuery(
-    () => db.members
-      .filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      .toArray(),
+    async () => {
+      const allMembers = await db.members.toArray();
+      return allMembers.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    },
     [searchTerm]
   );
 
@@ -35,6 +38,10 @@ export function Members() {
     if (confirm('Are you sure you want to delete this member?')) {
       await db.members.delete(id);
     }
+  };
+
+  const getDivisionName = (id: number) => {
+    return divisions?.find(d => d.id === id)?.name || `Division ${id}`;
   };
 
   return (
@@ -73,10 +80,9 @@ export function Members() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Division *</label>
               <select required name="divisionId" className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
-                <option value="1">Division 1 (0-9)</option>
-                <option value="2">Division 2 (10-18)</option>
-                <option value="3">Division 3 (19-28)</option>
-                <option value="4">Division 4 (29+)</option>
+                {divisions?.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
               </select>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 mt-4">
@@ -124,7 +130,7 @@ export function Members() {
                   <tr key={member.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900">{member.name}</td>
                     <td className="px-6 py-4">{member.handicapIndex.toFixed(1)}</td>
-                    <td className="px-6 py-4">Div {member.divisionId}</td>
+                    <td className="px-6 py-4">{getDivisionName(member.divisionId)}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${member.isActive ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}`}>
                         {member.isActive ? 'Active' : 'Inactive'}

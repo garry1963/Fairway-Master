@@ -49,7 +49,7 @@ export function Dashboard() {
       // Add Tournament
       await db.tournaments.add({
         name: 'The Masters Society Event',
-        courseId: Number(courseId),
+        courseId: courseId,
         seasonId: 1,
         date: new Date(),
         format: 'Stableford',

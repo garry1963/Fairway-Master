@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { FileText, FileSpreadsheet, Image as ImageIcon, Download, Share2, Printer, Filter } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { toPng, toCanvas } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
@@ -24,6 +24,7 @@ export function Reports() {
   const members = useLiveQuery(() => db.members.toArray());
   const scoreCards = useLiveQuery(() => db.scoreCards.toArray());
   const courses = useLiveQuery(() => db.courses.toArray());
+  const divisions = useLiveQuery(() => db.divisions.toArray());
 
   const getMemberName = (memberId: number) => {
     return members?.find(m => m.id === memberId)?.name || 'Unknown';
@@ -31,6 +32,12 @@ export function Reports() {
 
   const getTournamentName = (tournamentId: number) => {
     return tournaments?.find(t => t.id === tournamentId)?.name || 'Unknown';
+  };
+
+  const getDivisionName = (idStr: string) => {
+    if (idStr === 'Unassigned') return 'Unassigned';
+    const id = parseInt(idStr, 10);
+    return divisions?.find(d => d.id === id)?.name || `Division ${id}`;
   };
 
   const calculateOrderOfMerit = () => {
@@ -64,6 +71,18 @@ export function Reports() {
   const calculateDivisionTables = () => {
     if (!scoreCards || !members || !tournaments) return {};
     
+    // Calculate total qualifying rounds per member in the selected season
+    const totalRoundsPerMember: Record<number, number> = {};
+    scoreCards.forEach(sc => {
+      const tournament = tournaments.find(t => t.id === sc.tournamentId);
+      if (!tournament || tournament.isOrderOfMerit === false) return;
+      if (selectedSeason !== 'all' && tournament.seasonId !== selectedSeason) return;
+      
+      if (sc.grossScore > 0) {
+        totalRoundsPerMember[sc.memberId] = (totalRoundsPerMember[sc.memberId] || 0) + 1;
+      }
+    });
+
     const divisionPoints: Record<string, Record<number, { points: number, events: number }>> = {};
     
     scoreCards.forEach(sc => {
@@ -84,7 +103,9 @@ export function Reports() {
       }
       
       divisionPoints[divId][sc.memberId].points += sc.stablefordPoints;
-      divisionPoints[divId][sc.memberId].events += 1;
+      if (sc.grossScore > 0) {
+        divisionPoints[divId][sc.memberId].events += 1;
+      }
     });
 
     const divisionTables: Record<string, any[]> = {};
@@ -99,6 +120,7 @@ export function Reports() {
             events: divisionPoints[divId][memberId].events
           };
         })
+        .filter(player => (totalRoundsPerMember[player.memberId] || 0) >= 4)
         .sort((a, b) => b.points - a.points);
     });
 
@@ -327,7 +349,7 @@ export function Reports() {
     const element = document.getElementById('pdf-report-content');
     if (!element) return;
 
-    const canvas = await html2canvas(element, { scale: 2 });
+    const canvas = await toCanvas(element, { pixelRatio: 2 });
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -341,10 +363,10 @@ export function Reports() {
     const element = document.getElementById('social-graphic-content');
     if (!element) return;
 
-    const canvas = await html2canvas(element, { scale: 3, useCORS: true });
+    const dataUrl = await toPng(element, { pixelRatio: 3 });
     const link = document.createElement('a');
     link.download = `social_graphic_${format(new Date(), 'yyyyMMdd')}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = dataUrl;
     link.click();
   };
 
@@ -474,7 +496,7 @@ export function Reports() {
                         {Object.keys(divisionTables).map(divId => (
                           <div key={divId}>
                             <h4 className="font-bold text-emerald-700 mb-2">
-                              {divId === 'Unassigned' ? 'Unassigned' : `Division ${divId}`}
+                              {getDivisionName(divId)}
                             </h4>
                             <table className="w-full text-sm text-left">
                               <thead>

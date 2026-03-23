@@ -48,7 +48,7 @@ export function Backup() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      await db.transaction('rw', [db.members, db.courses, db.seasons, db.tournaments, db.scoreCards], async () => {
+      try {
         await db.members.clear();
         await db.courses.clear();
         await db.seasons.clear();
@@ -60,7 +60,10 @@ export function Backup() {
         if (data.seasons?.length) await db.seasons.bulkAdd(data.seasons);
         if (data.tournaments?.length) await db.tournaments.bulkAdd(data.tournaments);
         if (data.scoreCards?.length) await db.scoreCards.bulkAdd(data.scoreCards);
-      });
+      } catch (e) {
+        console.error('Error during import operations:', e);
+        throw e;
+      }
 
       alert('Data imported successfully!');
     } catch (error) {

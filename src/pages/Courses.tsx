@@ -107,7 +107,7 @@ export function Courses() {
     }
   };
 
-  const handleSelectCourse = async (courseId: number) => {
+  const handleSelectCourse = async (courseId: string) => {
     setIsSearching(true);
     setSearchError('');
     

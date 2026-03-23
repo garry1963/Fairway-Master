@@ -123,7 +123,7 @@ export function Statistics() {
     }
 
     if (statType === 'distribution') {
-      const distByMember: Record<number, any> = {};
+      const distByMember: Record<string, any> = {};
       filteredData.forEach(sc => {
         if (!distByMember[sc.memberId]) {
           distByMember[sc.memberId] = { name: sc.member.name, albatross: 0, eagle: 0, birdie: 0, par: 0, bogey: 0, double: 0, worse: 0 };
@@ -172,7 +172,7 @@ export function Statistics() {
     }
 
     if (statType === 'average') {
-      const avgByMember: Record<number, any> = {};
+      const avgByMember: Record<string, any> = {};
       filteredData.forEach(sc => {
         if (!avgByMember[sc.memberId]) {
           avgByMember[sc.memberId] = { name: sc.member.name, rounds: 0, strokes: 0 };
@@ -208,7 +208,7 @@ export function Statistics() {
     }
 
     if (statType === 'best') {
-      const bestByMember: Record<number, any> = {};
+      const bestByMember: Record<string, any> = {};
       filteredData.forEach(sc => {
         if (!bestByMember[sc.memberId] || sc.totalScoreToUse < bestByMember[sc.memberId].score || (sc.totalScoreToUse === bestByMember[sc.memberId].score && new Date(sc.tournament.date) > new Date(bestByMember[sc.memberId].date))) {
           bestByMember[sc.memberId] = { name: sc.member.name, score: sc.totalScoreToUse, date: sc.tournament.date, course: sc.course.name };
@@ -243,7 +243,7 @@ export function Statistics() {
 
     if (statType === 'par3' || statType === 'par4' || statType === 'par5') {
       const targetPar = statType === 'par3' ? 3 : statType === 'par4' ? 4 : 5;
-      const perfByMember: Record<number, any> = {};
+      const perfByMember: Record<string, any> = {};
       filteredData.forEach(sc => {
         if (!perfByMember[sc.memberId]) {
           perfByMember[sc.memberId] = { name: sc.member.name, holes: 0, strokes: 0 };
@@ -341,7 +341,7 @@ export function Statistics() {
       const course = courses?.find(c => c.id === courseId);
       if (!course) return null;
 
-      const potentialByMember: Record<number, any> = {};
+      const potentialByMember: Record<string, any> = {};
       
       filteredData.forEach(sc => {
         if (!potentialByMember[sc.memberId]) {
