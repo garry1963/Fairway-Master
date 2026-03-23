@@ -1,11 +1,12 @@
 /// <reference types="vite/client" />
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe, Search, Loader2 } from 'lucide-react';
+import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe, Search, Loader2, Edit2 } from 'lucide-react';
 import { db, type Course, type HoleDefinition } from '../db';
 
 export function Courses() {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
   const [expandedCourseId, setExpandedCourseId] = useState<number | null>(null);
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseLocation, setNewCourseLocation] = useState('');
@@ -34,7 +35,7 @@ export function Courses() {
     const totalPar = holes.reduce((sum, h) => sum + h.par, 0);
     const totalYardage = holes.reduce((sum, h) => sum + h.yardage, 0);
 
-    await db.courses.add({
+    const courseData = {
       name: formData.get('name') as string,
       location: formData.get('location') as string,
       par: totalPar,
@@ -42,9 +43,38 @@ export function Courses() {
       slopeRating: parseFloat(formData.get('slopeRating') as string),
       courseRating: parseFloat(formData.get('courseRating') as string),
       holes
-    });
+    };
+
+    if (editingCourseId) {
+      await db.courses.update(editingCourseId, courseData);
+    } else {
+      await db.courses.add(courseData);
+    }
     
     setIsAdding(false);
+    setEditingCourseId(null);
+    setNewCourseName('');
+    setNewCourseLocation('');
+    setNewCourseRating('');
+    setNewSlopeRating('');
+    setHoles(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 })));
+  };
+
+  const handleEdit = (course: Course) => {
+    setIsAdding(true);
+    setEditingCourseId(course.id!);
+    setNewCourseName(course.name);
+    setNewCourseLocation(course.location);
+    setNewCourseRating(course.courseRating.toString());
+    setNewSlopeRating(course.slopeRating.toString());
+    setHoles(course.holes);
+    setExpandedCourseId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingCourseId(null);
     setNewCourseName('');
     setNewCourseLocation('');
     setNewCourseRating('');
@@ -190,19 +220,21 @@ export function Courses() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Courses</h1>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Map className="w-4 h-4" />
-          Add Course
-        </button>
+        {!isAdding && (
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Course
+          </button>
+        )}
       </div>
 
       {isAdding && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Add New Course</h2>
+            <h2 className="text-lg font-semibold">{editingCourseId ? 'Edit Course' : 'Add New Course'}</h2>
             <button 
               type="button"
               onClick={(e) => handleWebSearch(e, newCourseName, newCourseLocation)}
@@ -390,8 +422,10 @@ export function Courses() {
             </div>
 
             <div className="flex justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Save Course</button>
+              <button type="button" onClick={handleCancel} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                {editingCourseId ? 'Update Course' : 'Save Course'}
+              </button>
             </div>
           </form>
         </div>
@@ -428,6 +462,12 @@ export function Courses() {
                     title="Search Web for Course"
                   >
                     <Globe className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleEdit(course); }} 
+                    className="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50"
+                  >
+                    <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleDelete(course.id!); }} 
