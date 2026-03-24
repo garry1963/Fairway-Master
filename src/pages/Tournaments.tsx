@@ -1,13 +1,24 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Trophy, Plus, Trash2, Calendar as CalendarIcon, MapPin, Award, X } from 'lucide-react';
+import { Trophy, Plus, Trash2, Calendar as CalendarIcon, MapPin, Award, X, Edit2 } from 'lucide-react';
 import { db, type Tournament, type SideGameWinner } from '../db';
 import { format } from 'date-fns';
 
 export function Tournaments() {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTournamentId, setEditingTournamentId] = useState<number | null>(null);
   const [managingSideGames, setManagingSideGames] = useState<number | null>(null);
   const [newSideGame, setNewSideGame] = useState<Partial<SideGameWinner>>({ type: 'Longest Drive' });
+  
+  // Form state
+  const [name, setName] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [numberOfRounds, setNumberOfRounds] = useState('1');
+  const [formatType, setFormatType] = useState('Stableford');
+  const [isMajor, setIsMajor] = useState(false);
+  const [isOrderOfMerit, setIsOrderOfMerit] = useState(true);
   
   const tournaments = useLiveQuery(() => db.tournaments.toArray());
   const courses = useLiveQuery(() => db.courses.toArray());
@@ -15,24 +26,53 @@ export function Tournaments() {
 
   const handleAddTournament = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
     
-    const endDateStr = formData.get('endDate') as string;
-    const numRoundsStr = formData.get('numberOfRounds') as string;
-
-    await db.tournaments.add({
-      name: formData.get('name') as string,
-      courseId: parseInt(formData.get('courseId') as string, 10),
+    const tournamentData = {
+      name,
+      courseId: parseInt(courseId, 10),
       seasonId: 1, // Default season for now
-      date: new Date(formData.get('date') as string),
-      endDate: endDateStr ? new Date(endDateStr) : undefined,
-      numberOfRounds: numRoundsStr ? parseInt(numRoundsStr, 10) : 1,
-      format: formData.get('format') as string,
-      isMajor: formData.get('isMajor') === 'on',
-      isOrderOfMerit: formData.get('isOrderOfMerit') === 'on'
-    });
+      date: new Date(date),
+      endDate: endDate ? new Date(endDate) : undefined,
+      numberOfRounds: numberOfRounds ? parseInt(numberOfRounds, 10) : 1,
+      format: formatType,
+      isMajor,
+      isOrderOfMerit
+    };
+
+    if (editingTournamentId) {
+      await db.tournaments.update(editingTournamentId, tournamentData);
+    } else {
+      await db.tournaments.add(tournamentData);
+    }
     
+    handleCancel();
+  };
+
+  const handleEdit = (tournament: Tournament) => {
+    setIsAdding(true);
+    setEditingTournamentId(tournament.id!);
+    setName(tournament.name);
+    setCourseId(tournament.courseId.toString());
+    setDate(format(new Date(tournament.date), 'yyyy-MM-dd'));
+    setEndDate(tournament.endDate ? format(new Date(tournament.endDate), 'yyyy-MM-dd') : '');
+    setNumberOfRounds(tournament.numberOfRounds?.toString() || '1');
+    setFormatType(tournament.format);
+    setIsMajor(tournament.isMajor || false);
+    setIsOrderOfMerit(tournament.isOrderOfMerit ?? true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancel = () => {
     setIsAdding(false);
+    setEditingTournamentId(null);
+    setName('');
+    setCourseId('');
+    setDate('');
+    setEndDate('');
+    setNumberOfRounds('1');
+    setFormatType('Stableford');
+    setIsMajor(false);
+    setIsOrderOfMerit(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -79,26 +119,41 @@ export function Tournaments() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Tournaments</h1>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Trophy className="w-4 h-4" />
-          Create Tournament
-        </button>
+        {!isAdding && (
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Trophy className="w-4 h-4" />
+            Create Tournament
+          </button>
+        )}
       </div>
 
       {isAdding && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Create New Tournament</h2>
+          <h2 className="text-lg font-semibold mb-4">{editingTournamentId ? 'Edit Tournament' : 'Create New Tournament'}</h2>
           <form onSubmit={handleAddTournament} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Tournament Name *</label>
-              <input required name="name" type="text" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+              <input 
+                required 
+                name="name" 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Course *</label>
-              <select required name="courseId" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border">
+              <select 
+                required 
+                name="courseId" 
+                value={courseId}
+                onChange={(e) => setCourseId(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border"
+              >
                 <option value="">Select a course...</option>
                 {courses?.map(course => (
                   <option key={course.id} value={course.id}>{course.name}</option>
@@ -107,36 +162,78 @@ export function Tournaments() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Start Date *</label>
-              <input required name="date" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+              <input 
+                required 
+                name="date" 
+                type="date" 
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">End Date (Optional)</label>
-              <input name="endDate" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+              <input 
+                name="endDate" 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Number of Rounds</label>
-              <input name="numberOfRounds" type="number" min="1" defaultValue="1" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" />
+              <input 
+                name="numberOfRounds" 
+                type="number" 
+                min="1" 
+                value={numberOfRounds}
+                onChange={(e) => setNumberOfRounds(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Format *</label>
-              <select required name="format" className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border">
+              <select 
+                required 
+                name="format" 
+                value={formatType}
+                onChange={(e) => setFormatType(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 border"
+              >
                 <option value="Stableford">Stableford</option>
                 <option value="Stroke Play">Stroke Play</option>
                 <option value="Modified Stableford">Modified Stableford</option>
               </select>
             </div>
             <div className="flex items-center gap-2 mt-6">
-              <input type="checkbox" id="isMajor" name="isMajor" className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4" />
+              <input 
+                type="checkbox" 
+                id="isMajor" 
+                name="isMajor" 
+                checked={isMajor}
+                onChange={(e) => setIsMajor(e.target.checked)}
+                className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4" 
+              />
               <label htmlFor="isMajor" className="text-sm font-medium text-slate-700">Major Tournament (Double Points)</label>
             </div>
             <div className="flex items-center gap-2 mt-6">
-              <input type="checkbox" id="isOrderOfMerit" name="isOrderOfMerit" defaultChecked className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4" />
+              <input 
+                type="checkbox" 
+                id="isOrderOfMerit" 
+                name="isOrderOfMerit" 
+                checked={isOrderOfMerit}
+                onChange={(e) => setIsOrderOfMerit(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4" 
+              />
               <label htmlFor="isOrderOfMerit" className="text-sm font-medium text-slate-700">Order of Merit Event</label>
             </div>
             
             <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Save Tournament</button>
+              <button type="button" onClick={handleCancel} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">
+                {editingTournamentId ? 'Update Tournament' : 'Save Tournament'}
+              </button>
             </div>
           </form>
         </div>
@@ -159,9 +256,14 @@ export function Tournaments() {
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 leading-tight">{tournament.name}</h3>
                 </div>
-                <button onClick={() => handleDelete(tournament.id!)} className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex gap-1">
+                  <button onClick={() => handleEdit(tournament)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(tournament.id!)} className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="p-4 flex-1 space-y-3">
                 <div className="flex items-center gap-3 text-slate-600">
