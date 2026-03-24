@@ -4,15 +4,29 @@ import { Settings as SettingsIcon, Percent, ShieldCheck, Scale, Info, Database }
 export function Settings() {
   const [apiName, setApiName] = useState('');
   const [apiKey, setApiKey] = useState('');
+  
+  // Society Preferences
+  const [societyName, setSocietyName] = useState('My Golf Society');
+  const [handicapSystem, setHandicapSystem] = useState('World Handicap System (WHS)');
+  const [pointsSystem, setPointsSystem] = useState('Standard (25, 20, 18, 16...)');
 
   useEffect(() => {
     setApiName(localStorage.getItem('golfCourseApiName') || '');
     setApiKey(localStorage.getItem('golfCourseApiKey') || '');
+    
+    setSocietyName(localStorage.getItem('societyName') || 'My Golf Society');
+    setHandicapSystem(localStorage.getItem('handicapSystem') || 'World Handicap System (WHS)');
+    setPointsSystem(localStorage.getItem('pointsSystem') || 'Standard (25, 20, 18, 16...)');
   }, []);
 
   const handleSave = () => {
     localStorage.setItem('golfCourseApiName', apiName);
     localStorage.setItem('golfCourseApiKey', apiKey);
+    
+    localStorage.setItem('societyName', societyName);
+    localStorage.setItem('handicapSystem', handicapSystem);
+    localStorage.setItem('pointsSystem', pointsSystem);
+    
     alert('Settings saved successfully!');
   };
 
@@ -31,12 +45,21 @@ export function Settings() {
         <div className="space-y-6 max-w-2xl">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Society Name</label>
-            <input type="text" defaultValue="My Golf Society" className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" />
+            <input 
+              type="text" 
+              value={societyName}
+              onChange={(e) => setSocietyName(e.target.value)}
+              className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" 
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Default Handicap System</label>
-            <select className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+            <select 
+              value={handicapSystem}
+              onChange={(e) => setHandicapSystem(e.target.value)}
+              className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            >
               <option>World Handicap System (WHS)</option>
               <option>CONGU</option>
               <option>EGA</option>
@@ -46,7 +69,11 @@ export function Settings() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Points Allocation System</label>
-            <select className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+            <select 
+              value={pointsSystem}
+              onChange={(e) => setPointsSystem(e.target.value)}
+              className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            >
               <option>Standard (25, 20, 18, 16...)</option>
               <option>FedEx Cup Style</option>
               <option>Stableford points system</option>
