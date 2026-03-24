@@ -20,7 +20,10 @@ export function Courses() {
     Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, par: 4, yardage: 350, strokeIndex: i + 1 }))
   );
   
-  const courses = useLiveQuery(() => db.courses.toArray());
+  const courses = useLiveQuery(async () => {
+    const allCourses = await db.courses.toArray();
+    return allCourses.sort((a, b) => a.name.localeCompare(b.name));
+  });
 
   const handleHoleChange = (index: number, field: keyof HoleDefinition, value: number) => {
     const newHoles = [...holes];

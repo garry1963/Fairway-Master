@@ -21,7 +21,9 @@ export function Members() {
   const members = useLiveQuery(
     async () => {
       const allMembers = await db.members.toArray();
-      return allMembers.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      return allMembers
+        .filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
     [searchTerm]
   );

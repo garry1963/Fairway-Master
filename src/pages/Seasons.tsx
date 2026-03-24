@@ -1,12 +1,19 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Calendar, Plus, Trash2, Award, ArrowUpCircle, ArrowDownCircle, X } from 'lucide-react';
+import { Calendar, Plus, Trash2, Award, ArrowUpCircle, ArrowDownCircle, X, Edit2 } from 'lucide-react';
 import { db, type Season, type Member, type Tournament, type ScoreCard } from '../db';
 import { format } from 'date-fns';
 
 export function Seasons() {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingSeasonId, setEditingSeasonId] = useState<number | null>(null);
   const [endingSeasonId, setEndingSeasonId] = useState<number | null>(null);
+  
+  // Form state
+  const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [numDivisions, setNumDivisions] = useState('4');
   
   const seasons = useLiveQuery(() => db.seasons.toArray());
   const members = useLiveQuery(() => db.members.toArray());
@@ -16,16 +23,40 @@ export function Seasons() {
 
   const handleAddSeason = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
     
-    await db.seasons.add({
-      name: formData.get('name') as string,
-      startDate: new Date(formData.get('startDate') as string),
-      endDate: new Date(formData.get('endDate') as string),
-      numDivisions: parseInt(formData.get('numDivisions') as string, 10),
-    });
+    const seasonData = {
+      name,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      numDivisions: parseInt(numDivisions, 10),
+    };
+
+    if (editingSeasonId) {
+      await db.seasons.update(editingSeasonId, seasonData);
+    } else {
+      await db.seasons.add(seasonData);
+    }
     
+    handleCancel();
+  };
+
+  const handleEdit = (season: Season) => {
+    setIsAdding(true);
+    setEditingSeasonId(season.id!);
+    setName(season.name);
+    setStartDate(format(new Date(season.startDate), 'yyyy-MM-dd'));
+    setEndDate(format(new Date(season.endDate), 'yyyy-MM-dd'));
+    setNumDivisions(season.numDivisions.toString());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancel = () => {
     setIsAdding(false);
+    setEditingSeasonId(null);
+    setName('');
+    setStartDate('');
+    setEndDate('');
+    setNumDivisions('4');
   };
 
   const handleDelete = async (id: number) => {
@@ -140,38 +171,73 @@ export function Seasons() {
     <div className="space-y-6 relative">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Seasons</h1>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Calendar className="w-4 h-4" />
-          Create Season
-        </button>
+        {!isAdding && (
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            Create Season
+          </button>
+        )}
       </div>
 
       {isAdding && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Create New Season</h2>
+          <h2 className="text-lg font-semibold mb-4">{editingSeasonId ? 'Edit Season' : 'Create New Season'}</h2>
           <form onSubmit={handleAddSeason} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Season Name *</label>
-              <input required name="name" type="text" placeholder="e.g. 2026 Society Tour" className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
+              <input 
+                required 
+                name="name" 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. 2026 Society Tour" 
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Number of Divisions *</label>
-              <input required name="numDivisions" type="number" min="1" max="10" defaultValue="4" className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
+              <input 
+                required 
+                name="numDivisions" 
+                type="number" 
+                min="1" 
+                max="10" 
+                value={numDivisions}
+                onChange={(e) => setNumDivisions(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Start Date *</label>
-              <input required name="startDate" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
+              <input 
+                required 
+                name="startDate" 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">End Date *</label>
-              <input required name="endDate" type="date" className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
+              <input 
+                required 
+                name="endDate" 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" 
+              />
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Season</button>
+              <button type="button" onClick={handleCancel} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                {editingSeasonId ? 'Update Season' : 'Save Season'}
+              </button>
             </div>
           </form>
         </div>
@@ -190,9 +256,14 @@ export function Seasons() {
                   <h3 className="text-lg font-bold text-slate-900 leading-tight">{season.name}</h3>
                   <p className="text-sm text-slate-500 mt-1">{season.numDivisions} Divisions</p>
                 </div>
-                <button onClick={() => handleDelete(season.id!)} className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex justify-end gap-1">
+                  <button onClick={() => handleEdit(season)} className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(season.id!)} className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="p-4 flex-1 space-y-3">
                 <div className="flex items-center justify-between text-sm text-slate-600">

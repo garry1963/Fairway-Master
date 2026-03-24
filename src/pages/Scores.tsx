@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FileSpreadsheet, Save, CheckCircle2, Settings2, Download } from 'lucide-react';
 import { db, type ScoreCard, type HoleScore } from '../db';
@@ -19,6 +19,24 @@ export function Scores() {
   const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
   const selectedCourse = courses?.find(c => c.id === selectedTournament?.courseId);
   const selectedMember = members?.find(m => m.id === selectedMemberId);
+
+  const existingScoreCard = useLiveQuery(
+    () => {
+      if (selectedTournamentId && selectedMemberId) {
+        return db.scoreCards.where({ tournamentId: selectedTournamentId, memberId: selectedMemberId }).first();
+      }
+      return undefined;
+    },
+    [selectedTournamentId, selectedMemberId]
+  );
+
+  useEffect(() => {
+    if (existingScoreCard) {
+      setScores(existingScoreCard.holes);
+    } else {
+      setScores(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
+    }
+  }, [existingScoreCard, selectedTournamentId, selectedMemberId]);
 
   const handleScoreChange = (index: number, field: keyof HoleScore, value: any) => {
     const newScores = [...scores];
@@ -55,9 +73,6 @@ export function Scores() {
   const handleSave = async () => {
     if (!selectedTournamentId || !selectedMemberId || !selectedCourse) return;
 
-    const allScores = await db.scoreCards.toArray();
-    const existingScore = allScores.find(s => s.tournamentId === selectedTournamentId && s.memberId === selectedMemberId);
-
     const scoreCard: ScoreCard = {
       tournamentId: selectedTournamentId,
       memberId: selectedMemberId,
@@ -67,8 +82,8 @@ export function Scores() {
       stablefordPoints: totals.stableford
     };
 
-    if (existingScore && existingScore.id) {
-      await db.scoreCards.put({ ...scoreCard, id: existingScore.id });
+    if (existingScoreCard && existingScoreCard.id) {
+      await db.scoreCards.put({ ...scoreCard, id: existingScoreCard.id });
     } else {
       await db.scoreCards.add(scoreCard);
     }
@@ -94,6 +109,13 @@ export function Scores() {
         <h1 className="text-3xl font-bold text-slate-900">Score Entry</h1>
         {selectedTournamentId && selectedMemberId && selectedCourse && (
           <div className="flex gap-2">
+            <button 
+              onClick={handleSave}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              {isSaved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {isSaved ? 'Saved!' : (existingScoreCard ? 'Update Score' : 'Save Score')}
+            </button>
             <button 
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
