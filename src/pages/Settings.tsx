@@ -2,22 +2,13 @@ import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Percent, ShieldCheck, Scale, Info, Database } from 'lucide-react';
 
 export function Settings() {
-  const [apiName, setApiName] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiName, setApiName] = useState(() => localStorage.getItem('golfCourseApiName') || '');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('golfCourseApiKey') || '');
   
   // Society Preferences
-  const [societyName, setSocietyName] = useState('My Golf Society');
-  const [handicapSystem, setHandicapSystem] = useState('World Handicap System (WHS)');
-  const [pointsSystem, setPointsSystem] = useState('Standard (25, 20, 18, 16...)');
-
-  useEffect(() => {
-    setApiName(localStorage.getItem('golfCourseApiName') || '');
-    setApiKey(localStorage.getItem('golfCourseApiKey') || '');
-    
-    setSocietyName(localStorage.getItem('societyName') || 'My Golf Society');
-    setHandicapSystem(localStorage.getItem('handicapSystem') || 'World Handicap System (WHS)');
-    setPointsSystem(localStorage.getItem('pointsSystem') || 'Standard (25, 20, 18, 16...)');
-  }, []);
+  const [societyName, setSocietyName] = useState(() => localStorage.getItem('societyName') || 'My Golf Society');
+  const [handicapSystem, setHandicapSystem] = useState(() => localStorage.getItem('handicapSystem') || 'World Handicap System (WHS)');
+  const [pointsSystem, setPointsSystem] = useState(() => localStorage.getItem('pointsSystem') || 'Standard (25, 20, 18, 16...)');
 
   const handleSave = () => {
     localStorage.setItem('golfCourseApiName', apiName);
@@ -60,10 +51,10 @@ export function Settings() {
               onChange={(e) => setHandicapSystem(e.target.value)}
               className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             >
-              <option>World Handicap System (WHS)</option>
-              <option>CONGU</option>
-              <option>EGA</option>
-              <option>Custom Society Handicap</option>
+              <option value="World Handicap System (WHS)">World Handicap System (WHS)</option>
+              <option value="CONGU">CONGU</option>
+              <option value="EGA">EGA</option>
+              <option value="Custom Society Handicap">Custom Society Handicap</option>
             </select>
           </div>
 
@@ -74,10 +65,10 @@ export function Settings() {
               onChange={(e) => setPointsSystem(e.target.value)}
               className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
             >
-              <option>Standard (25, 20, 18, 16...)</option>
-              <option>FedEx Cup Style</option>
-              <option>Stableford points system</option>
-              <option>Custom</option>
+              <option value="Standard (25, 20, 18, 16...)">Standard (25, 20, 18, 16...)</option>
+              <option value="FedEx Cup Style">FedEx Cup Style</option>
+              <option value="Stableford points system">Stableford points system</option>
+              <option value="Custom">Custom</option>
             </select>
           </div>
         </div>
