@@ -6,6 +6,14 @@ import { toCanvas } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
+const FAMOUS_HOLES = [
+  "https://images.unsplash.com/photo-1587280501635-6cb103d5928f?auto=format&fit=crop&w=800&q=80", // Coastal (Pebble Beach vibe)
+  "https://images.unsplash.com/photo-1535139262971-c51845709a48?auto=format&fit=crop&w=800&q=80", // Island green (Sawgrass vibe)
+  "https://images.unsplash.com/photo-1593111774240-d529f12cb416?auto=format&fit=crop&w=800&q=80", // Classic parkland (Augusta vibe)
+  "https://images.unsplash.com/photo-1622279457486-69d73ce287ef?auto=format&fit=crop&w=800&q=80", // Links style (St Andrews vibe)
+  "https://images.unsplash.com/photo-1514316454349-750a7fd3da3a?auto=format&fit=crop&w=800&q=80", // Sunset silhouette
+];
+
 export function Divisions() {
   const members = useLiveQuery(() => db.members.toArray());
   const divisions = useLiveQuery(() => db.divisions.toArray());
@@ -150,8 +158,8 @@ export function Divisions() {
         </div>
       )}
 
-      <div id="divisions-content" className="grid grid-cols-1 gap-6 bg-white p-4 rounded-xl">
-        {divisions?.map(div => {
+      <div id="divisions-content" className="grid grid-cols-1 gap-8">
+        {divisions?.map((div, index) => {
           // Fallback to div.id if name is somehow empty, though it shouldn't be
           const divMembers = members?.filter(m => m.divisionId === div.id) || [];
           
@@ -163,9 +171,16 @@ export function Divisions() {
           const isEditing = editingId === div.id;
           
           return (
-            <div key={div.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b bg-slate-50 border-slate-200 flex items-center gap-3">
-                <Layers className="w-5 h-5 text-indigo-600" />
+            <div key={div.id} className="bg-white rounded-xl shadow-md border border-emerald-100 overflow-hidden">
+              <div className="relative p-4 border-b bg-gradient-to-r from-emerald-800 to-teal-700 border-emerald-800 overflow-hidden">
+                <img 
+                  src={FAMOUS_HOLES[index % FAMOUS_HOLES.length]} 
+                  alt="Famous golf course hole" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="relative z-10 flex items-center gap-3 w-full">
+                  <Layers className="w-5 h-5 text-emerald-100" />
                 
                 {isEditing ? (
                   <div className="flex-1 flex items-center gap-2">
@@ -173,62 +188,72 @@ export function Divisions() {
                       type="text" 
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="flex-1 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-1 px-2 border text-sm"
+                      className="flex-1 rounded-md border-emerald-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-1 px-2 border text-sm text-slate-900"
                       autoFocus
                     />
-                    <button onClick={() => handleSaveEdit(div.id!)} className="text-emerald-600 hover:text-emerald-700">
+                    <button onClick={() => handleSaveEdit(div.id!)} className="text-emerald-100 hover:text-white bg-emerald-800/50 p-1 rounded transition-colors">
                       <Check className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setEditingId(null)} className="text-slate-400 hover:text-slate-600">
+                    <button onClick={() => setEditingId(null)} className="text-emerald-200 hover:text-white bg-emerald-800/50 p-1 rounded transition-colors">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-lg font-bold text-slate-900">{div.name}</h2>
-                    <button onClick={() => startEdit(div)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                    <h2 className="text-lg font-bold text-white">{div.name}</h2>
+                    <button onClick={() => startEdit(div)} className="text-emerald-200 hover:text-white transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
                   </>
                 )}
                 
                 <div className="ml-auto flex items-center gap-2">
-                  <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
+                  <span className="bg-emerald-800/40 text-emerald-50 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-600/50 shadow-inner">
                     {divMembers.length} Members
                   </span>
                   <button 
                     onClick={() => handleDeleteDivision(div.id!)}
-                    className="text-slate-400 hover:text-red-600 transition-colors ml-1"
+                    className="text-emerald-200 hover:text-red-300 transition-colors ml-1"
                     title="Delete Division"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+                </div>
               </div>
               <div className="p-0 overflow-x-auto">
                 {membersWithStats.length === 0 ? (
-                  <p className="p-4 text-slate-500 text-sm text-center">No members in this division.</p>
+                  <p className="p-6 text-emerald-600/60 text-sm text-center italic bg-emerald-50/30">No members in this division.</p>
                 ) : (
                   <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-slate-50 text-slate-500">
+                    <thead className="bg-emerald-50 text-emerald-800 border-b border-emerald-100">
                       <tr>
-                        <th className="px-4 py-3 font-medium w-16 text-center">Rank</th>
-                        <th className="px-4 py-3 font-medium">Player</th>
-                        <th className="px-4 py-3 font-medium text-center">Handicap</th>
-                        <th className="px-4 py-3 font-medium text-center">Rounds</th>
-                        <th className="px-4 py-3 font-medium text-center">Avg Score</th>
-                        <th className="px-4 py-3 font-medium text-right">Total Points</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider w-16 text-center">Rank</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Player</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Handicap</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Rounds</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Avg Score</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Total Points</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-emerald-50">
                       {membersWithStats.map((member, index) => (
-                        <tr key={member.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 text-center font-medium text-slate-500">{index + 1}</td>
-                          <td className="px-4 py-3 font-medium text-slate-900">{member.name}</td>
+                        <tr key={member.id} className="hover:bg-emerald-50/60 transition-colors group">
+                          <td className="px-4 py-3 text-center">
+                            <div className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-xs font-bold ${
+                              index === 0 ? 'bg-amber-100 text-amber-700 border border-amber-200 shadow-sm' :
+                              index === 1 ? 'bg-slate-200 text-slate-700 border border-slate-300 shadow-sm' :
+                              index === 2 ? 'bg-orange-100 text-orange-800 border border-orange-200 shadow-sm' :
+                              'bg-emerald-100/50 text-emerald-700'
+                            }`}>
+                              {index + 1}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-medium text-slate-800 group-hover:text-emerald-900 transition-colors">{member.name}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{member.handicapIndex.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{member.stats.rounds}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{member.stats.averageScore}</td>
-                          <td className="px-4 py-3 text-right font-bold text-indigo-600">{member.stats.totalPoints}</td>
+                          <td className="px-4 py-3 text-right font-bold text-emerald-700">{member.stats.totalPoints}</td>
                         </tr>
                       ))}
                     </tbody>
