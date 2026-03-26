@@ -7,11 +7,11 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 const FAMOUS_HOLES = [
-  "https://images.unsplash.com/photo-1587280501635-6cb103d5928f?auto=format&fit=crop&w=800&q=80", // Coastal (Pebble Beach vibe)
-  "https://images.unsplash.com/photo-1535139262971-c51845709a48?auto=format&fit=crop&w=800&q=80", // Island green (Sawgrass vibe)
-  "https://images.unsplash.com/photo-1593111774240-d529f12cb416?auto=format&fit=crop&w=800&q=80", // Classic parkland (Augusta vibe)
-  "https://images.unsplash.com/photo-1622279457486-69d73ce287ef?auto=format&fit=crop&w=800&q=80", // Links style (St Andrews vibe)
-  "https://images.unsplash.com/photo-1514316454349-750a7fd3da3a?auto=format&fit=crop&w=800&q=80", // Sunset silhouette
+  "https://upload.wikimedia.org/wikipedia/commons/b/be/Pebble_Beach_Golf_Links%2C_hole_7.jpg", // Pebble Beach 7th Hole
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Swilken_Bridge%2C_Old_Course_geograph-6310525-by-Gordon-Hatton.jpg/960px-Swilken_Bridge%2C_Old_Course_geograph-6310525-by-Gordon-Hatton.jpg", // St Andrews Swilken Bridge
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/18th_Hole_at_Muirfield%2C_The_Open_2013_.jpg/960px-18th_Hole_at_Muirfield%2C_The_Open_2013_.jpg", // Muirfield 18th Hole
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Ballybunion_Golf_Club_-_10th_hole.jpg/960px-Ballybunion_Golf_Club_-_10th_hole.jpg", // Ballybunion 10th Hole
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Pinehurst_No._4_%284599083949%29.jpg/960px-Pinehurst_No._4_%284599083949%29.jpg", // Pinehurst No. 4
 ];
 
 export function Divisions() {
@@ -178,6 +178,7 @@ export function Divisions() {
                   alt="Famous golf course hole" 
                   className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
                   referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                 />
                 <div className="relative z-10 flex items-center gap-3 w-full">
                   <Layers className="w-5 h-5 text-emerald-100" />
