@@ -3,12 +3,17 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { BarChart3, Filter, Calendar as CalendarIcon, Map, Users, Target } from 'lucide-react';
 import { db, type ScoreCard, type Tournament, type Course, type Member } from '../db';
 import { format } from 'date-fns';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell
+} from 'recharts';
 
 type StatType = 'history' | 'distribution' | 'average' | 'best' | 'par3' | 'par4' | 'par5' | 'hole_difficulty' | 'potential_best';
 type ScoreType = 'gross' | 'net';
 
 export function Statistics() {
   // Filters
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [statType, setStatType] = useState<StatType>('history');
   const [seasonId, setSeasonId] = useState<number | 'all'>('all');
   const [scoreType, setScoreType] = useState<ScoreType>('gross');
@@ -91,7 +96,39 @@ export function Statistics() {
     if (filteredData.length === 0) return <div className="p-8 text-center text-slate-500">No data found for the selected filters.</div>;
 
     if (statType === 'history') {
-      const sorted = [...filteredData].sort((a, b) => new Date(b.tournament.date).getTime() - new Date(a.tournament.date).getTime());
+      const sorted = [...filteredData].sort((a, b) => new Date(a.tournament.date).getTime() - new Date(b.tournament.date).getTime());
+      
+      if (viewMode === 'chart') {
+        const dataByDate: Record<string, any> = {};
+        const players = new Set<string>();
+        sorted.forEach(sc => {
+          const dateStr = format(new Date(sc.tournament.date), 'MMM d, yyyy');
+          if (!dataByDate[dateStr]) dataByDate[dateStr] = { date: dateStr };
+          dataByDate[dateStr][sc.member.name] = sc.totalScoreToUse;
+          players.add(sc.member.name);
+        });
+        const chartData = Object.values(dataByDate);
+        const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+        
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip />
+                <Legend />
+                {Array.from(players).map((player, i) => (
+                  <Line key={player} type="monotone" dataKey={player} stroke={colors[i % colors.length]} activeDot={{ r: 8 }} connectNulls />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
+      const sortedDesc = [...sorted].reverse();
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -106,7 +143,7 @@ export function Statistics() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {sorted.map(sc => (
+              {sortedDesc.map(sc => (
                 <tr key={sc.id} className="hover:bg-slate-50">
                   <td className="p-3">{format(new Date(sc.tournament.date), 'MMM d, yyyy')}</td>
                   <td className="p-3 font-medium">{sc.member.name}</td>
@@ -139,6 +176,75 @@ export function Statistics() {
         });
       });
       const rows = Object.values(distByMember).sort((a, b) => b.birdie - a.birdie);
+
+      if (viewMode === 'chart') {
+        const colors = {
+          albatross: '#9333ea',
+          eagle: '#2563eb',
+          birdie: '#059669',
+          par: '#475569',
+          bogey: '#f97316',
+          double: '#dc2626'
+        };
+
+        if (memberId !== 'all' && rows.length === 1) {
+          const r = rows[0];
+          const pieData = [
+            { name: 'Albatross+', value: r.albatross, fill: colors.albatross },
+            { name: 'Eagle', value: r.eagle, fill: colors.eagle },
+            { name: 'Birdie', value: r.birdie, fill: colors.birdie },
+            { name: 'Par', value: r.par, fill: colors.par },
+            { name: 'Bogey', value: r.bogey, fill: colors.bogey },
+            { name: 'Double+', value: r.double + r.worse, fill: colors.double },
+          ].filter(d => d.value > 0);
+
+          return (
+            <div className="h-96 w-full flex justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip />
+                  <Legend />
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={130}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        }
+
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="albatross" stackId="a" fill={colors.albatross} name="Albatross+" />
+                <Bar dataKey="eagle" stackId="a" fill={colors.eagle} name="Eagle" />
+                <Bar dataKey="birdie" stackId="a" fill={colors.birdie} name="Birdie" />
+                <Bar dataKey="par" stackId="a" fill={colors.par} name="Par" />
+                <Bar dataKey="bogey" stackId="a" fill={colors.bogey} name="Bogey" />
+                <Bar dataKey="double" stackId="a" fill={colors.double} name="Double+" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -181,6 +287,24 @@ export function Statistics() {
         avgByMember[sc.memberId].strokes += sc.totalScoreToUse;
       });
       const rows = Object.values(avgByMember).map(r => ({ ...r, avg: r.strokes / r.rounds })).sort((a, b) => a.avg - b.avg);
+
+      if (viewMode === 'chart') {
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip formatter={(value: number) => value.toFixed(2)} />
+                <Legend />
+                <Bar dataKey="avg" fill="#4f46e5" name="Scoring Average" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -215,6 +339,24 @@ export function Statistics() {
         }
       });
       const rows = Object.values(bestByMember).sort((a, b) => a.score - b.score);
+
+      if (viewMode === 'chart') {
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="score" fill="#10b981" name={`Best Score (${scoreType})`} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -254,6 +396,24 @@ export function Statistics() {
         });
       });
       const rows = Object.values(perfByMember).filter(r => r.holes > 0).map(r => ({ ...r, avg: r.strokes / r.holes })).sort((a, b) => a.avg - b.avg);
+
+      if (viewMode === 'chart') {
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip formatter={(value: number) => value.toFixed(2)} />
+                <Legend />
+                <Bar dataKey="avg" fill="#4f46e5" name={`Average Score on Par ${targetPar}s`} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -304,6 +464,28 @@ export function Statistics() {
         const avg = r.strokes / r.plays;
         return { ...r, avg, toPar: avg - r.par };
       }).sort((a, b) => b.toPar - a.toPar);
+
+      if (viewMode === 'chart') {
+        const sortedRows = [...rows].sort((a, b) => a.holeNumber - b.holeNumber);
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sortedRows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="holeNumber" name="Hole" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => (value > 0 ? '+' : '') + value.toFixed(2)} />
+                <Legend />
+                <Bar dataKey="toPar" name="Average to Par">
+                  {sortedRows.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.toPar > 0 ? '#ef4444' : entry.toPar < 0 ? '#10b981' : '#94a3b8'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
 
       return (
         <div className="overflow-x-auto">
@@ -365,6 +547,23 @@ export function Statistics() {
         return <div className="p-8 text-center text-slate-500">No players have completed all 18 holes on this course to calculate a potential best round.</div>;
       }
 
+      if (viewMode === 'chart') {
+        return (
+          <div className="h-96 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#8b5cf6" name="Potential Best Total" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      }
+
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -400,6 +599,20 @@ export function Statistics() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Advanced Statistics</h1>
+        <div className="flex bg-slate-100 p-1 rounded-lg">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'table' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Table
+          </button>
+          <button
+            onClick={() => setViewMode('chart')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'chart' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Chart
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
