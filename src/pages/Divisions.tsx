@@ -111,6 +111,20 @@ export function Divisions() {
     pdf.save(`divisions_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
+  const handleExportDivisionPDF = async (divId: number, divName: string) => {
+    const element = document.getElementById(`division-table-${divId}`);
+    if (!element) return;
+
+    const canvas = await toCanvas(element, { pixelRatio: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`division_${divName.replace(/\s+/g, '_').toLowerCase()}_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -171,7 +185,7 @@ export function Divisions() {
           const isEditing = editingId === div.id;
           
           return (
-            <div key={div.id} className="bg-white rounded-xl shadow-md border border-emerald-100 overflow-hidden">
+            <div key={div.id} id={`division-table-${div.id}`} className="bg-white rounded-xl shadow-md border border-emerald-100 overflow-hidden">
               <div className="relative p-4 border-b bg-gradient-to-r from-emerald-800 to-teal-700 border-emerald-800 overflow-hidden">
                 <img 
                   src={FAMOUS_HOLES[index % FAMOUS_HOLES.length]} 
@@ -212,6 +226,13 @@ export function Divisions() {
                   <span className="bg-emerald-800/40 text-emerald-50 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-600/50 shadow-inner">
                     {divMembers.length} Members
                   </span>
+                  <button 
+                    onClick={() => handleExportDivisionPDF(div.id!, div.name)}
+                    className="text-emerald-200 hover:text-white transition-colors ml-1"
+                    title="Export Division PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
                   <button 
                     onClick={() => handleDeleteDivision(div.id!)}
                     className="text-emerald-200 hover:text-red-300 transition-colors ml-1"
