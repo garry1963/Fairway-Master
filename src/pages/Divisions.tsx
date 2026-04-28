@@ -68,6 +68,7 @@ export function Divisions() {
   const getMemberStats = (memberId: number) => {
     let rounds = 0;
     let totalGross = 0;
+    let totalNet = 0;
     let totalPoints = 0;
 
     if (scoreCards && tournaments && seasons) {
@@ -85,6 +86,7 @@ export function Divisions() {
           if (sc.grossScore > 0) {
             rounds += 1;
             totalGross += sc.grossScore;
+            totalNet += sc.netScore;
           }
         });
       }
@@ -93,7 +95,8 @@ export function Divisions() {
     return {
       rounds,
       totalPoints,
-      averageScore: rounds > 0 ? (totalGross / rounds).toFixed(1) : '0.0'
+      averageGrossScore: rounds > 0 ? (totalGross / rounds).toFixed(1) : '0.0',
+      averageNetScore: rounds > 0 ? (totalNet / rounds).toFixed(1) : '0.0'
     };
   };
 
@@ -254,7 +257,8 @@ export function Divisions() {
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Player</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Handicap</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Rounds</th>
-                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Avg Score</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Avg Gross</th>
+                        <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Avg Net</th>
                         <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Total Points</th>
                       </tr>
                     </thead>
@@ -274,7 +278,8 @@ export function Divisions() {
                           <td className="px-4 py-3 font-medium text-slate-800 group-hover:text-emerald-900 transition-colors">{member.name}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{member.handicapIndex.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{member.stats.rounds}</td>
-                          <td className="px-4 py-3 text-center text-slate-600">{member.stats.averageScore}</td>
+                          <td className="px-4 py-3 text-center text-slate-600">{member.stats.averageGrossScore}</td>
+                          <td className="px-4 py-3 text-center text-slate-600">{member.stats.averageNetScore}</td>
                           <td className="px-4 py-3 text-right font-bold text-emerald-700">{member.stats.totalPoints}</td>
                         </tr>
                       ))}
