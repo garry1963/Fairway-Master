@@ -35,6 +35,7 @@ export interface Season {
   startDate: Date;
   endDate: Date;
   numDivisions: number;
+  divisionSettings?: Record<number, { promote: number; relegate: number }>;
 }
 
 export interface HoleScore {

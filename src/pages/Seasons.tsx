@@ -14,6 +14,7 @@ export function Seasons() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [numDivisions, setNumDivisions] = useState('4');
+  const [divisionSettings, setDivisionSettings] = useState<Record<number, { promote: number; relegate: number }>>({});
   
   const seasons = useLiveQuery(() => db.seasons.toArray());
   const members = useLiveQuery(() => db.members.toArray());
@@ -29,6 +30,7 @@ export function Seasons() {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       numDivisions: parseInt(numDivisions, 10),
+      divisionSettings,
     };
 
     if (editingSeasonId) {
@@ -47,6 +49,7 @@ export function Seasons() {
     setStartDate(format(new Date(season.startDate), 'yyyy-MM-dd'));
     setEndDate(format(new Date(season.endDate), 'yyyy-MM-dd'));
     setNumDivisions(season.numDivisions.toString());
+    setDivisionSettings(season.divisionSettings || {});
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -57,6 +60,7 @@ export function Seasons() {
     setStartDate('');
     setEndDate('');
     setNumDivisions('4');
+    setDivisionSettings({});
   };
 
   const handleDelete = async (id: number) => {
@@ -122,11 +126,13 @@ export function Seasons() {
       const divMembers = divisions[currentDiv.id];
       if (!divMembers || divMembers.length === 0) continue;
 
+      const settings = season.divisionSettings?.[currentDiv.id] || { promote: 2, relegate: 2 };
+
       // Promotions (not applicable for top division)
       if (i > 0) {
         const higherDiv = sortedDivisions[i - 1];
-        if (higherDiv && higherDiv.id) {
-          const promoted = divMembers.slice(0, 2);
+        if (higherDiv && higherDiv.id && settings.promote > 0) {
+          const promoted = divMembers.slice(0, settings.promote);
           promoted.forEach(p => {
             changes.push({ member: p.member, from: currentDiv.id!, to: higherDiv.id!, reason: 'promotion' });
           });
@@ -136,10 +142,10 @@ export function Seasons() {
       // Relegations (not applicable for bottom division)
       if (i < sortedDivisions.length - 1) {
         const lowerDiv = sortedDivisions[i + 1];
-        if (lowerDiv && lowerDiv.id) {
-          // Only relegate if there are more than 2 members, otherwise it's weird
-          if (divMembers.length > 2) {
-            const relegated = divMembers.slice(-2);
+        if (lowerDiv && lowerDiv.id && settings.relegate > 0) {
+          // Only relegate if there are more members than relegated places so we don't clear the division
+          if (divMembers.length > settings.relegate) {
+            const relegated = divMembers.slice(-settings.relegate);
             relegated.forEach(r => {
               changes.push({ member: r.member, from: currentDiv.id!, to: lowerDiv.id!, reason: 'relegation' });
             });
@@ -233,6 +239,36 @@ export function Seasons() {
                 className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" 
               />
             </div>
+            
+            {divisionsList && divisionsList.length > 0 && (
+              <div className="md:col-span-2 mt-4">
+                <h3 className="text-md font-semibold text-slate-800 mb-3">Promotion & Relegation Settings</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[...divisionsList].sort((a, b) => a.name.localeCompare(b.name)).map(div => (
+                    <div key={div.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="font-bold text-slate-800 mb-3">{div.name}</div>
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <label className="block text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Promote Top</label>
+                          <input type="number" min="0" max="10" 
+                            value={divisionSettings[div.id!]?.promote ?? 2}
+                            onChange={(e) => setDivisionSettings(prev => ({ ...prev, [div.id!]: { ...prev[div.id!], promote: parseInt(e.target.value) || 0, relegate: prev[div.id!]?.relegate ?? 2 } }))}
+                            className="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500 p-2 text-sm border shadow-sm" />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Relegate Bottom</label>
+                          <input type="number" min="0" max="10"
+                            value={divisionSettings[div.id!]?.relegate ?? 2}
+                            onChange={(e) => setDivisionSettings(prev => ({ ...prev, [div.id!]: { ...prev[div.id!], promote: prev[div.id!]?.promote ?? 2, relegate: parseInt(e.target.value) || 0 } }))}
+                             className="w-full rounded-md border-red-200 focus:border-red-500 focus:ring-red-500 p-2 text-sm border shadow-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="md:col-span-2 flex justify-end gap-3 mt-4">
               <button type="button" onClick={handleCancel} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
               <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
