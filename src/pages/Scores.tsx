@@ -11,6 +11,7 @@ export function Scores() {
   const [scores, setScores] = useState<HoleScore[]>(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
   const [isSaved, setIsSaved] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isMainEvent, setIsMainEvent] = useState(false);
 
   const tournaments = useLiveQuery(() => db.tournaments.toArray());
   const members = useLiveQuery(() => db.members.toArray());
@@ -33,8 +34,10 @@ export function Scores() {
   useEffect(() => {
     if (existingScoreCard) {
       setScores(existingScoreCard.holes);
+      setIsMainEvent(existingScoreCard.isMainEvent || false);
     } else {
       setScores(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
+      setIsMainEvent(false);
     }
   }, [existingScoreCard, selectedTournamentId, selectedMemberId]);
 
@@ -65,6 +68,10 @@ export function Scores() {
       }
     });
 
+    if (isMainEvent) {
+      stableford = stableford * 1.5;
+    }
+
     return { gross, net, stableford };
   };
 
@@ -79,7 +86,8 @@ export function Scores() {
       holes: scores,
       grossScore: totals.gross,
       netScore: totals.net,
-      stablefordPoints: totals.stableford
+      stablefordPoints: totals.stableford,
+      isMainEvent: isMainEvent
     };
 
     if (existingScoreCard && existingScoreCard.id) {
@@ -178,6 +186,32 @@ export function Scores() {
             </select>
           </div>
         </div>
+
+        {selectedTournamentId && selectedMemberId && selectedCourse && (
+          <div className="flex items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-100 shadow-sm transition-all duration-200">
+            <div className="flex items-center h-5">
+              <input
+                id="main-event"
+                name="main-event"
+                type="checkbox"
+                checked={isMainEvent}
+                onChange={(e) => {
+                  setIsMainEvent(e.target.checked);
+                  setIsSaved(false);
+                }}
+                className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+            </div>
+            <div className="ml-2 text-sm">
+              <label htmlFor="main-event" className="font-semibold text-purple-950 cursor-pointer select-none">
+                Main Event
+              </label>
+              <p className="text-purple-700 text-xs">
+                Applying a 1.5x multiplier to the total Stableford points calculated for this round.
+              </p>
+            </div>
+          </div>
+        )}
 
         {selectedTournamentId && selectedMemberId && selectedCourse ? (
           <div className="space-y-6" id="scorecard-container">

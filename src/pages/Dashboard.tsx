@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Users, Trophy, Map, Calendar as CalendarIcon, DatabaseZap } from 'lucide-react';
+import { Users, Trophy, Map, Calendar as CalendarIcon, DatabaseZap, Award } from 'lucide-react';
 import { db } from '../db';
 import { useState } from 'react';
 
@@ -9,6 +9,30 @@ export function Dashboard() {
   const tournamentCount = useLiveQuery(() => db.tournaments.count());
   const courseCount = useLiveQuery(() => db.courses.count());
   const scoreCount = useLiveQuery(() => db.scoreCards.count());
+
+  // Fetch the 5 most recently entered tournament scores
+  const recentScores = useLiveQuery(async () => {
+    const cards = await db.scoreCards.toArray();
+    // Sort by id descending (most recently created/entered first)
+    const sorted = cards.sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, 5);
+    
+    // Resolve member and tournament titles
+    const data = await Promise.all(
+      sorted.map(async (card) => {
+        const member = await db.members.get(card.memberId);
+        const tournament = await db.tournaments.get(card.tournamentId);
+        return {
+          id: card.id,
+          playerName: member ? member.name : 'Unknown Player',
+          tournamentName: tournament ? tournament.name : 'Unknown Tournament',
+          points: card.stablefordPoints,
+          grossScore: card.grossScore,
+          netScore: card.netScore
+        };
+      })
+    );
+    return data;
+  });
 
   const handleSeedData = async () => {
     setIsSeeding(true);
@@ -88,8 +112,38 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
-          <p className="text-slate-500 text-sm">No recent activity to show.</p>
+          <h2 className="text-lg font-semibold mb-4 text-slate-800 flex items-center gap-2">
+            <Award className="w-5 h-5 text-indigo-500" />
+            Recently Entered Scores
+          </h2>
+          {recentScores && recentScores.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-500">
+                    <th className="pb-3 font-medium">Player</th>
+                    <th className="pb-3 font-medium">Tournament</th>
+                    <th className="pb-3 font-medium text-right">Points Earned</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentScores.map((score) => (
+                    <tr key={score.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 font-medium text-slate-900">{score.playerName}</td>
+                      <td className="py-3 text-slate-600">{score.tournamentName}</td>
+                      <td className="py-3 text-right">
+                        <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {score.points} pts
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-slate-500 text-sm py-4">No scores entered yet. Go to the Score Entry page to log tournament rounds!</p>
+          )}
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-lg font-semibold mb-4">Upcoming Tournaments</h2>
