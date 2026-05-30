@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Users, Trophy, Map, Calendar as CalendarIcon, DatabaseZap, Award } from 'lucide-react';
 import { db } from '../db';
 import { useState } from 'react';
+import { MemberOfTheMonth } from '../components/MemberOfTheMonth';
 
 export function Dashboard() {
   const [isSeeding, setIsSeeding] = useState(false);
@@ -110,7 +111,8 @@ export function Dashboard() {
         <StatCard title="Scores Entered" value={scoreCount ?? 0} icon={CalendarIcon} color="bg-purple-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+        <MemberOfTheMonth />
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-lg font-semibold mb-4 text-slate-800 flex items-center gap-2">
             <Award className="w-5 h-5 text-indigo-500" />

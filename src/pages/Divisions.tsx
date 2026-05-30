@@ -178,7 +178,7 @@ export function Divisions() {
       <div id="divisions-content" className="grid grid-cols-1 gap-8">
         {divisions?.map((div, index) => {
           // Fallback to div.id if name is somehow empty, though it shouldn't be
-          const divMembers = members?.filter(m => m.divisionId === div.id) || [];
+          const divMembers = members?.filter(m => m.divisionId === div.id && m.isActive) || [];
           
           const membersWithStats = divMembers.map(m => ({
             ...m,
