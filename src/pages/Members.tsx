@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, UserPlus, Search, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Plus, UserPlus, Search, MoreVertical, Edit2, Trash2, Download } from 'lucide-react';
 import { db, type Member } from '../db';
+import { convertToCSV, downloadCSV } from '../utils/csvExport';
 
 export function Members() {
   const [isAdding, setIsAdding] = useState(false);
@@ -85,19 +86,45 @@ export function Members() {
     return divisions?.find(d => d.id === id)?.name || `Division ${id}`;
   };
 
+  const handleExportCSV = () => {
+    if (!members) return;
+    const headers = ['ID', 'Name', 'Email', 'Phone', 'Handicap Index', 'Division Name', 'Status', 'Join Date'];
+    const rows = members.map(m => [
+      m.id || '',
+      m.name,
+      m.email || '',
+      m.phone || '',
+      m.handicapIndex,
+      getDivisionName(m.divisionId),
+      m.isActive ? 'Active' : 'Inactive',
+      m.joinDate
+    ]);
+    const csvContent = convertToCSV(headers, rows);
+    downloadCSV(`GolfSociety_Members_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Members</h1>
-        {!isAdding && (
+        <div className="flex gap-2.5">
           <button 
-            onClick={() => setIsAdding(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            onClick={handleExportCSV}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium shadow-sm cursor-pointer"
           >
-            <UserPlus className="w-4 h-4" />
-            Add Member
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
           </button>
-        )}
+          {!isAdding && (
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Member
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (

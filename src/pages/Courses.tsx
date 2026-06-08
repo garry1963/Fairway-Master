@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe, Search, Loader2, Edit2 } from 'lucide-react';
+import { Map, Plus, Trash2, ChevronDown, ChevronUp, Globe, Search, Loader2, Edit2, Download } from 'lucide-react';
 import { db, type Course, type HoleDefinition } from '../db';
+import { convertToCSV, downloadCSV } from '../utils/csvExport';
 
 export function Courses() {
   const [isAdding, setIsAdding] = useState(false);
@@ -219,19 +220,65 @@ export function Courses() {
     setSearchQuery('');
   };
 
+  const handleExportCSV = () => {
+    if (!courses) return;
+    
+    // Headers: core info + 18 holes details
+    const headers = ['ID', 'Course Name', 'Location', 'Total Par', 'Total Yardage', 'Slope Rating', 'Course Rating'];
+    for (let i = 1; i <= 18; i++) {
+      headers.push(`Hole ${i} Par`, `Hole ${i} Yardage`, `Hole ${i} S.I.`);
+    }
+
+    const rows = courses.map(course => {
+      const row = [
+        course.id || '',
+        course.name,
+        course.location,
+        course.par,
+        course.yardage,
+        course.slopeRating,
+        course.courseRating
+      ];
+
+      // Pad out the holes so each course has exactly 18 holes mapped
+      for (let i = 0; i < 18; i++) {
+        const hole = course.holes[i];
+        if (hole) {
+          row.push(hole.par, hole.yardage, hole.strokeIndex);
+        } else {
+          row.push('', '', '');
+        }
+      }
+
+      return row;
+    });
+
+    const csvContent = convertToCSV(headers, rows);
+    downloadCSV(`GolfSociety_Courses_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Courses</h1>
-        {!isAdding && (
+        <div className="flex gap-2.5">
           <button 
-            onClick={() => setIsAdding(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            onClick={handleExportCSV}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium shadow-sm cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            Add Course
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
           </button>
-        )}
+          {!isAdding && (
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Course
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (

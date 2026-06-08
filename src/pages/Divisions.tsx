@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Layers, Plus, Trash2, Edit2, Check, X, Download } from 'lucide-react';
 import { db, type Division } from '../db';
+import { convertToCSV, downloadCSV } from '../utils/csvExport';
 import { toCanvas } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
@@ -128,14 +129,36 @@ export function Divisions() {
     pdf.save(`division_${divName.replace(/\s+/g, '_').toLowerCase()}_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
+  const handleExportCSV = () => {
+    if (!divisions) return;
+    const headers = ['ID', 'Division Name', 'Active Member Count'];
+    const rows = divisions.map(div => {
+      const activeCount = members?.filter(m => m.divisionId === div.id && m.isActive).length ?? 0;
+      return [
+        div.id || '',
+        div.name,
+        activeCount
+      ];
+    });
+    const csvContent = convertToCSV(headers, rows);
+    downloadCSV(`GolfSociety_Divisions_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Divisions</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
+          <button 
+            onClick={handleExportCSV}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium shadow-sm cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
+          </button>
           <button 
             onClick={handleExportPDF}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
           >
             <Download className="w-4 h-4" />
             Export PDF
