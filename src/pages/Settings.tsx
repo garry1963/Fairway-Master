@@ -9,6 +9,7 @@ export function Settings() {
   const [societyName, setSocietyName] = useState(() => localStorage.getItem('societyName') || 'My Golf Society');
   const [handicapSystem, setHandicapSystem] = useState(() => localStorage.getItem('handicapSystem') || 'World Handicap System (WHS)');
   const [pointsSystem, setPointsSystem] = useState(() => localStorage.getItem('pointsSystem') || 'Standard (25, 20, 18, 16...)');
+  const [mainEventMultiplier, setMainEventMultiplier] = useState(() => localStorage.getItem('mainEventMultiplier') || '1.5');
 
   const handleSave = () => {
     localStorage.setItem('golfCourseApiName', apiName);
@@ -17,6 +18,7 @@ export function Settings() {
     localStorage.setItem('societyName', societyName);
     localStorage.setItem('handicapSystem', handicapSystem);
     localStorage.setItem('pointsSystem', pointsSystem);
+    localStorage.setItem('mainEventMultiplier', mainEventMultiplier);
     
     alert('Settings saved successfully!');
   };
@@ -70,6 +72,50 @@ export function Settings() {
               <option value="Stableford points system">Stableford points system</option>
               <option value="Custom">Custom</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Main Event Points Multiplier (1.0 to 2.0)
+            </label>
+            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <input
+                type="range"
+                min="1.0"
+                max="2.0"
+                step="0.05"
+                value={mainEventMultiplier}
+                onChange={(e) => setMainEventMultiplier(e.target.value)}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+              />
+              <div className="flex items-center gap-2 shrink-0">
+                <input
+                  type="number"
+                  min="1.0"
+                  max="2.0"
+                  step="0.01"
+                  value={mainEventMultiplier}
+                  onChange={(e) => setMainEventMultiplier(e.target.value)}
+                  onBlur={() => {
+                    let numeric = parseFloat(mainEventMultiplier);
+                    if (isNaN(numeric)) {
+                      setMainEventMultiplier('1.5');
+                    } else if (numeric < 1) {
+                      setMainEventMultiplier('1.0');
+                    } else if (numeric > 2) {
+                      setMainEventMultiplier('2.0');
+                    } else {
+                      setMainEventMultiplier(String(Math.round(numeric * 100) / 100));
+                    }
+                  }}
+                  className="w-20 text-center font-bold text-slate-800 rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-1.5 border text-sm"
+                />
+                <span className="text-sm font-semibold text-slate-600">x</span>
+              </div>
+            </div>
+            <p className="text-slate-500 text-xs mt-1.5">
+              Specify the default multiplier applied to Stableford scores in Main Event tournaments. Any decimal value from 1 to 2 is supported here.
+            </p>
           </div>
         </div>
       </div>

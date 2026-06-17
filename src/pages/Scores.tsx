@@ -12,6 +12,9 @@ export function Scores() {
   const [isSaved, setIsSaved] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isMainEvent, setIsMainEvent] = useState(false);
+  const [mainEventMultiplier, setMainEventMultiplier] = useState<number>(() => {
+    return parseFloat(localStorage.getItem('mainEventMultiplier') || '1.5');
+  });
 
   const tournaments = useLiveQuery(() => db.tournaments.toArray());
   const members = useLiveQuery(() => db.members.toArray());
@@ -35,9 +38,11 @@ export function Scores() {
     if (existingScoreCard) {
       setScores(existingScoreCard.holes);
       setIsMainEvent(existingScoreCard.isMainEvent || false);
+      setMainEventMultiplier(existingScoreCard.mainEventMultiplier || parseFloat(localStorage.getItem('mainEventMultiplier') || '1.5'));
     } else {
       setScores(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
       setIsMainEvent(false);
+      setMainEventMultiplier(parseFloat(localStorage.getItem('mainEventMultiplier') || '1.5'));
     }
   }, [existingScoreCard, selectedTournamentId, selectedMemberId]);
 
@@ -69,7 +74,7 @@ export function Scores() {
     });
 
     if (isMainEvent) {
-      stableford = stableford * 1.5;
+      stableford = Math.round((stableford * mainEventMultiplier) * 100) / 100;
     }
 
     return { gross, net, stableford };
@@ -87,7 +92,8 @@ export function Scores() {
       grossScore: totals.gross,
       netScore: totals.net,
       stablefordPoints: totals.stableford,
-      isMainEvent: isMainEvent
+      isMainEvent: isMainEvent,
+      mainEventMultiplier: mainEventMultiplier
     };
 
     if (existingScoreCard && existingScoreCard.id) {
@@ -188,8 +194,8 @@ export function Scores() {
         </div>
 
         {selectedTournamentId && selectedMemberId && selectedCourse && (
-          <div className="flex items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-100 shadow-sm transition-all duration-200">
-            <div className="flex items-center h-5">
+          <div className="flex items-start sm:items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-100 shadow-sm transition-all duration-200">
+            <div className="flex items-center h-5 mt-1 sm:mt-0">
               <input
                 id="main-event"
                 name="main-event"
@@ -202,13 +208,45 @@ export function Scores() {
                 className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
               />
             </div>
-            <div className="ml-2 text-sm">
-              <label htmlFor="main-event" className="font-semibold text-purple-950 cursor-pointer select-none">
-                Main Event
-              </label>
-              <p className="text-purple-700 text-xs">
-                Applying a 1.5x multiplier to the total Stableford points calculated for this round.
-              </p>
+            <div className="ml-2 text-sm flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <label id="main-event-label" htmlFor="main-event" className="font-semibold text-purple-950 cursor-pointer select-none">
+                  Main Event
+                </label>
+                <p className="text-purple-700 text-xs">
+                  Applying a {mainEventMultiplier}x multiplier to the total Stableford points calculated for this round.
+                </p>
+              </div>
+              {isMainEvent && (
+                <div className="flex items-center gap-2 bg-white border border-purple-200 px-3 py-1.5 rounded-lg shadow-sm shrink-0">
+                  <span className="text-xs font-bold text-purple-950">Multiplier:</span>
+                  <input
+                    type="number"
+                    min="1.0"
+                    max="2.0"
+                    step="0.05"
+                    value={mainEventMultiplier}
+                    onChange={(e) => {
+                      const inputVal = e.target.value;
+                      const val = parseFloat(inputVal);
+                      if (!isNaN(val)) {
+                        setMainEventMultiplier(val);
+                      } else {
+                        setMainEventMultiplier(1.5);
+                      }
+                      setIsSaved(false);
+                    }}
+                    onBlur={() => {
+                      let val = mainEventMultiplier;
+                      if (val < 1.0) val = 1.0;
+                      if (val > 2.0) val = 2.0;
+                      setMainEventMultiplier(Math.round(val * 100) / 100);
+                    }}
+                    className="w-16 text-center text-xs font-bold text-purple-900 border border-purple-200 rounded p-1 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                  />
+                  <span className="text-xs font-semibold text-purple-500">x</span>
+                </div>
+              )}
             </div>
           </div>
         )}

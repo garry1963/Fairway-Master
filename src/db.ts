@@ -62,6 +62,7 @@ export interface ScoreCard {
   netScore: number;
   stablefordPoints: number;
   isMainEvent?: boolean;
+  mainEventMultiplier?: number;
 }
 
 export interface Tournament {
