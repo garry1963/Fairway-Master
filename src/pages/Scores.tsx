@@ -4,10 +4,12 @@ import { FileSpreadsheet, Save, CheckCircle2, Settings2, Download } from 'lucide
 import { db, type ScoreCard, type HoleScore } from '../db';
 import { ScoringEngine } from '../lib/scoring';
 import { toPng } from 'html-to-image';
+import { cn } from '../lib/utils';
 
 export function Scores() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | ''>('');
   const [selectedMemberId, setSelectedMemberId] = useState<number | ''>('');
+  const [selectedRound, setSelectedRound] = useState<number>(1);
   const [scores, setScores] = useState<HoleScore[]>(Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, grossScore: 0, putts: 0, fir: false, gir: false, sandSave: false })));
   const [isSaved, setIsSaved] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -24,15 +26,21 @@ export function Scores() {
   const selectedCourse = courses?.find(c => c.id === selectedTournament?.courseId);
   const selectedMember = members?.find(m => m.id === selectedMemberId);
 
-  const existingScoreCard = useLiveQuery(
+  const existingScoreCards = useLiveQuery(
     () => {
       if (selectedTournamentId && selectedMemberId) {
-        return db.scoreCards.where({ tournamentId: selectedTournamentId, memberId: selectedMemberId }).first();
+        return db.scoreCards.where({ tournamentId: selectedTournamentId, memberId: selectedMemberId }).toArray();
       }
-      return undefined;
+      return [];
     },
     [selectedTournamentId, selectedMemberId]
   );
+
+  const existingScoreCard = existingScoreCards?.find(sc => (sc.roundNumber || 1) === selectedRound);
+
+  useEffect(() => {
+    setSelectedRound(1);
+  }, [selectedTournamentId]);
 
   useEffect(() => {
     if (existingScoreCard) {
@@ -44,7 +52,7 @@ export function Scores() {
       setIsMainEvent(false);
       setMainEventMultiplier(parseFloat(localStorage.getItem('mainEventMultiplier') || '1.5'));
     }
-  }, [existingScoreCard, selectedTournamentId, selectedMemberId]);
+  }, [existingScoreCard, selectedTournamentId, selectedMemberId, selectedRound]);
 
   const handleScoreChange = (index: number, field: keyof HoleScore, value: any) => {
     const newScores = [...scores];
@@ -88,6 +96,7 @@ export function Scores() {
     const scoreCard: ScoreCard = {
       tournamentId: selectedTournamentId,
       memberId: selectedMemberId,
+      roundNumber: selectedRound,
       holes: scores,
       grossScore: totals.gross,
       netScore: totals.net,
@@ -112,7 +121,7 @@ export function Scores() {
 
     const dataUrl = await toPng(element, { pixelRatio: 2 });
     const link = document.createElement('a');
-    link.download = `scorecard_${selectedMember?.name}_${selectedTournament?.name}.png`;
+    link.download = `scorecard_${selectedMember?.name}_${selectedTournament?.name}_Round_${selectedRound}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -192,6 +201,46 @@ export function Scores() {
             </select>
           </div>
         </div>
+
+        {selectedTournamentId && selectedMemberId && selectedCourse && (selectedTournament?.numberOfRounds || 1) > 1 && (
+          <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+              Select Round Of Play
+            </label>
+            <div className="flex gap-2.5 flex-wrap">
+              {Array.from({ length: selectedTournament?.numberOfRounds || 1 }, (_, i) => {
+                const roundNum = i + 1;
+                const isRoundSelected = selectedRound === roundNum;
+                // Check if a score exists for this specific round number
+                const hasScore = existingScoreCards?.some(sc => (sc.roundNumber || 1) === roundNum);
+                return (
+                  <button
+                    key={roundNum}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRound(roundNum);
+                      setIsSaved(false);
+                    }}
+                    className={cn(
+                      "px-4.5 py-2 rounded-xl font-bold text-sm transition-all duration-150 cursor-pointer flex items-center gap-2 border shadow-sm",
+                      isRoundSelected
+                        ? "bg-purple-600 text-white border-purple-600 ring-2 ring-purple-500/10"
+                        : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
+                    )}
+                  >
+                    <span>Round {roundNum}</span>
+                    {hasScore && (
+                      <span className={cn(
+                        "w-2 h-2 rounded-full",
+                        isRoundSelected ? "bg-white animate-pulse" : "bg-emerald-500"
+                      )} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {selectedTournamentId && selectedMemberId && selectedCourse && (
           <div className="flex items-start sm:items-center gap-3 mb-6 p-4 bg-purple-50 rounded-xl border border-purple-100 shadow-sm transition-all duration-200">

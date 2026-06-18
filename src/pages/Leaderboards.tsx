@@ -38,16 +38,44 @@ export function Leaderboards() {
   const getTournamentLeaderboardData = () => {
     if (!tournamentScoreCards || !members) return [];
 
-    const data = tournamentScoreCards.map(score => {
+    const memberMap: Record<number, {
+      id: number;
+      memberId: number;
+      memberName: string;
+      handicap: number;
+      division: string;
+      grossScore: number;
+      netScore: number;
+      stablefordPoints: number;
+      roundsPlayed: number;
+    }> = {};
+
+    tournamentScoreCards.forEach(score => {
       const member = members.find(m => m.id === score.memberId);
       const div = divisions?.find(d => d.id === member?.divisionId);
-      return {
-        ...score,
-        memberName: member?.name || 'Unknown',
-        handicap: member?.handicapIndex || 0,
-        division: div?.name || `Division ${member?.divisionId}`
-      };
+      const mId = score.memberId;
+      
+      if (!memberMap[mId]) {
+        memberMap[mId] = {
+          id: score.id || mId,
+          memberId: mId,
+          memberName: member?.name || 'Unknown',
+          handicap: member?.handicapIndex || 0,
+          division: div?.name || `Division ${member?.divisionId}`,
+          grossScore: 0,
+          netScore: 0,
+          stablefordPoints: 0,
+          roundsPlayed: 0
+        };
+      }
+      
+      memberMap[mId].grossScore += score.grossScore;
+      memberMap[mId].netScore += score.netScore;
+      memberMap[mId].stablefordPoints += score.stablefordPoints;
+      memberMap[mId].roundsPlayed += 1;
     });
+
+    const data = Object.values(memberMap);
 
     // Sort by Stableford points descending
     return data.sort((a, b) => b.stablefordPoints - a.stablefordPoints);
@@ -212,7 +240,14 @@ export function Leaderboards() {
                                index === 2 ? <Medal className="w-5 h-5 text-amber-600 mx-auto" /> :
                                <span className="font-medium text-slate-500">{index + 1}</span>}
                             </td>
-                            <td className="px-6 py-4 font-medium text-slate-900">{row.memberName}</td>
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-slate-900">{row.memberName}</div>
+                              {(tournaments?.find(t => t.id === Number(selectedTournamentId))?.numberOfRounds || 1) > 1 && (
+                                <div className="text-xs text-slate-500 font-normal">
+                                  {row.roundsPlayed} of {tournaments?.find(t => t.id === Number(selectedTournamentId))?.numberOfRounds || 1} rounds played
+                                </div>
+                              )}
+                            </td>
                             <td className="px-6 py-4 text-center text-slate-500">{row.handicap.toFixed(1)}</td>
                             <td className="px-6 py-4 text-center text-slate-500">{row.division}</td>
                             <td className="px-6 py-4 text-center font-medium">{row.grossScore}</td>

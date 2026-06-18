@@ -57,6 +57,7 @@ export interface ScoreCard {
   id?: number;
   tournamentId: number;
   memberId: number;
+  roundNumber?: number;
   holes: HoleScore[];
   grossScore: number;
   netScore: number;
