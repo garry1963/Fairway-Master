@@ -689,9 +689,11 @@ export function Reports() {
                           className="w-full p-2 border border-slate-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
                         >
                           <option value="">-- Select a Player --</option>
-                          {members?.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
+                          {[...(members || [])]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(m => (
+                              <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
                         </select>
                       </div>
                       

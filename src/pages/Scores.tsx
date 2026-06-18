@@ -195,9 +195,11 @@ export function Scores() {
               className="w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-2 border"
             >
               <option value="">-- Select Player --</option>
-              {members?.map(m => (
-                <option key={m.id} value={m.id}>{m.name} (Hcp: {m.handicapIndex})</option>
-              ))}
+              {[...(members || [])]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(m => (
+                  <option key={m.id} value={m.id}>{m.name} (Hcp: {m.handicapIndex})</option>
+                ))}
             </select>
           </div>
         </div>
